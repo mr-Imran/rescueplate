@@ -376,9 +376,9 @@ async function restoreDemoWorld(tx, hashes) {
 
   for (const o of orgs.rows) {
     await tx.query(
-      `INSERT INTO organizations (id, type, name, address, lat, lng, daily_capacity_meals, status, join_code, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [o.id, o.type, o.name, o.address, o.lat, o.lng, o.daily_capacity_meals, o.status, o.join_code, o.created_at, o.updated_at],
+      `INSERT INTO organizations (id, type, name, address, lat, lng, daily_capacity_meals, status, join_code, version, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [o.id, o.type, o.name, o.address, o.lat, o.lng, o.daily_capacity_meals, o.status, o.join_code, o.version, o.created_at, o.updated_at],
     );
   }
   for (const u of users.rows) {

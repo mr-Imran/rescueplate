@@ -3,16 +3,17 @@ import { FIELD_LABELS, formatValue } from '../lib/format.js';
 import { Alert, Button, Modal } from './ui.jsx';
 
 /**
- * Shown when two people changed the same field of the same listing.
- * Nothing has been saved yet: the user picks, per field, which value to keep.
+ * Shown when two people changed the same field of the same record (a listing, or
+ * the organization's details). Nothing has been saved yet: the user picks, per
+ * field, which value to keep.
  */
-export function ConflictDialog({ conflict, onResolve, onDiscard, busy }) {
+export function ConflictDialog({ conflict, onResolve, onDiscard, busy, what = 'This listing' }) {
   const { conflicts, takenFromTheirs, keptMine, lastChange } = conflict;
   const [choice, setChoice] = useState(() => Object.fromEntries(conflicts.map((c) => [c.field, 'theirs'])));
   const who = lastChange?.actor || 'Someone else';
 
   return (
-    <Modal open onClose={onDiscard} title="This listing was changed while you were editing" wide>
+    <Modal open onClose={onDiscard} title={`${what} was changed while you were editing`} wide>
       <Alert tone="warning">
         <strong>{who}</strong> saved a newer version. Your changes have <strong>not</strong> been saved yet, and nothing was overwritten. Choose what to keep for each field below.
       </Alert>

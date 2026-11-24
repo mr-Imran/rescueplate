@@ -59,77 +59,78 @@ export default function Pickups() {
           { value: 'board', label: 'Available', count: board.data.length },
           { value: 'done', label: 'Done', count: done.length },
         ]}
-      />
+      >
 
-      {tab === 'mine' &&
-        (active.length === 0 ? (
-          <EmptyState
-            title="You have no pickups right now"
-            action={
-              <Button variant="secondary" onClick={() => setTab('board')}>
-                See available pickups
-              </Button>
-            }
-          >
-            Accept one from the board, or wait for an NGO to assign you.
-          </EmptyState>
-        ) : (
-          <ul className="grid gap-4 md:grid-cols-2">
-            {active.map((c) => (
-              <ClaimCard key={c.id} claim={c}>
-                {c.status === 'VOLUNTEER_ASSIGNED' && (
-                  <>
-                    <Button onClick={() => setCollecting(c)} disabled={Boolean(busy)}>
-                      I have collected it
-                    </Button>
-                    <Button variant="secondary" busy={busy === `un:${c.id}`} disabled={Boolean(busy)} onClick={() => run(`un:${c.id}`, () => api.post(`/claims/${c.id}/unassign`), 'Handed back. Another volunteer can take it.')}>
-                      I cannot do this
-                    </Button>
-                  </>
-                )}
-                {c.status === 'PICKED_UP' && (
-                  <Button busy={busy === `dl:${c.id}`} disabled={Boolean(busy)} onClick={() => run(`dl:${c.id}`, () => api.post(`/claims/${c.id}/deliver`), `${mealsText(c.meals)} delivered. Thank you!`)}>
-                    I have delivered it
-                  </Button>
-                )}
-              </ClaimCard>
-            ))}
-          </ul>
-        ))}
-
-      {tab === 'board' && (
-        <>
-          {full && (
-            <Alert tone="info" className="mb-4">
-              You are carrying {limit} pickups, the most allowed at once. Deliver one before accepting another.
-            </Alert>
-          )}
-          {board.data.length === 0 ? (
-            <EmptyState title="Nothing needs a volunteer right now">New pickups appear here the moment an NGO claims food.</EmptyState>
+        {tab === 'mine' &&
+          (active.length === 0 ? (
+            <EmptyState
+              title="You have no pickups right now"
+              action={
+                <Button variant="secondary" onClick={() => setTab('board')}>
+                  See available pickups
+                </Button>
+              }
+            >
+              Accept one from the board, or wait for an NGO to assign you.
+            </EmptyState>
           ) : (
             <ul className="grid gap-4 md:grid-cols-2">
-              {board.data.map((c) => (
+              {active.map((c) => (
                 <ClaimCard key={c.id} claim={c}>
-                  <Button busy={busy === `ac:${c.id}`} disabled={Boolean(busy) || full} onClick={() => run(`ac:${c.id}`, () => api.post(`/claims/${c.id}/accept`), 'Pickup accepted. It is in "My pickups".')}>
-                    Accept this pickup
-                  </Button>
+                  {c.status === 'VOLUNTEER_ASSIGNED' && (
+                    <>
+                      <Button onClick={() => setCollecting(c)} disabled={Boolean(busy)}>
+                        I have collected it
+                      </Button>
+                      <Button variant="secondary" busy={busy === `un:${c.id}`} disabled={Boolean(busy)} onClick={() => run(`un:${c.id}`, () => api.post(`/claims/${c.id}/unassign`), 'Handed back. Another volunteer can take it.')}>
+                        I cannot do this
+                      </Button>
+                    </>
+                  )}
+                  {c.status === 'PICKED_UP' && (
+                    <Button busy={busy === `dl:${c.id}`} disabled={Boolean(busy)} onClick={() => run(`dl:${c.id}`, () => api.post(`/claims/${c.id}/deliver`), `${mealsText(c.meals)} delivered. Thank you!`)}>
+                      I have delivered it
+                    </Button>
+                  )}
                 </ClaimCard>
               ))}
             </ul>
-          )}
-        </>
-      )}
+          ))}
 
-      {tab === 'done' &&
-        (done.length === 0 ? (
-          <EmptyState title="No deliveries yet">Your completed deliveries will be listed here.</EmptyState>
-        ) : (
-          <ul className="grid gap-4 md:grid-cols-2">
-            {done.map((c) => (
-              <ClaimCard key={c.id} claim={c} />
-            ))}
-          </ul>
-        ))}
+        {tab === 'board' && (
+          <>
+            {full && (
+              <Alert tone="info" className="mb-4">
+                You are carrying {limit} pickups, the most allowed at once. Deliver one before accepting another.
+              </Alert>
+            )}
+            {board.data.length === 0 ? (
+              <EmptyState title="Nothing needs a volunteer right now">New pickups appear here the moment an NGO claims food.</EmptyState>
+            ) : (
+              <ul className="grid gap-4 md:grid-cols-2">
+                {board.data.map((c) => (
+                  <ClaimCard key={c.id} claim={c}>
+                    <Button busy={busy === `ac:${c.id}`} disabled={Boolean(busy) || full} onClick={() => run(`ac:${c.id}`, () => api.post(`/claims/${c.id}/accept`), 'Pickup accepted. It is in "My pickups".')}>
+                      Accept this pickup
+                    </Button>
+                  </ClaimCard>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+
+        {tab === 'done' &&
+          (done.length === 0 ? (
+            <EmptyState title="No deliveries yet">Your completed deliveries will be listed here.</EmptyState>
+          ) : (
+            <ul className="grid gap-4 md:grid-cols-2">
+              {done.map((c) => (
+                <ClaimCard key={c.id} claim={c} />
+              ))}
+            </ul>
+          ))}
+      </Tabs>
 
       {collecting && (
         <CollectDialog

@@ -184,6 +184,83 @@ describe('conflict detection: two users update the same record', () => {
   });
 });
 
+describe('conflict detection also covers organization details', () => {
+  // Farhana (donor) and Tanvir (donor2) both work at Shapla Kitchen.
+  const myOrg = async (c) => (await c.get('/org')).body.org;
+  const dbOrg = async () => (await query('SELECT * FROM organizations WHERE id = $1', [seedId('org:shapla')])).rows[0];
+
+  it('a stale save by a colleague is rejected with 409 and the latest data, and nothing is overwritten', async () => {
+    const v = (await myOrg(donor)).version;
+    const first = await donor.patch('/org', { expectedVersion: v, address: 'House 14A, Road 7, Dhanmondi, Dhaka' });
+    expect(first.status).toBe(200);
+    expect(first.body.org.version).toBe(v + 1);
+
+    // Tanvir still has the old version open and saves a different field.
+    const stale = await donor2.patch('/org', { expectedVersion: v, lat: 23.75 });
+    expect(stale.status).toBe(409);
+    expect(stale.body.error.code).toBe('VERSION_CONFLICT');
+    expect(stale.body.error.details).toMatchObject({
+      yourVersion: v,
+      current: { version: v + 1, address: 'House 14A, Road 7, Dhanmondi, Dhaka', lat: 23.7461 },
+      lastChange: { actor: 'Farhana Akter (donor)', action: 'org.updated' },
+    });
+    expect(await dbOrg()).toMatchObject({ address: 'House 14A, Road 7, Dhanmondi, Dhaka', lat: 23.7461, version: v + 1 });
+
+    // He merges onto the latest version and retries: both changes survive.
+    const merged = await donor2.patch('/org', { expectedVersion: v + 1, lat: 23.75 });
+    expect(merged.body.org).toMatchObject({ address: 'House 14A, Road 7, Dhanmondi, Dhaka', lat: 23.75, version: v + 2 });
+  });
+
+  it('truly simultaneous saves by two staff: exactly one wins, every time', async () => {
+    for (let round = 0; round < 6; round++) {
+      const v = (await myOrg(donor)).version;
+      const [a, b] = await Promise.all([
+        donor.patch('/org', { expectedVersion: v, address: `Kitchen entrance A, round ${round}, Dhaka` }),
+        donor2.patch('/org', { expectedVersion: v, address: `Kitchen entrance B, round ${round}, Dhaka` }),
+      ]);
+      expect([a.status, b.status].sort()).toEqual([200, 409]);
+      const winner = a.status === 200 ? a : b;
+      const row = await dbOrg();
+      expect(row.version).toBe(v + 1);
+      expect(row.address).toBe(winner.body.org.address); // the loser did not overwrite the winner
+    }
+  });
+
+  it('a change by an admin is detected too, and the edit succeeds on the new version', async () => {
+    const admin = await s.as('admin');
+    const v = (await myOrg(donor)).version;
+    await admin.post(`/admin/organizations/${seedId('org:shapla')}/status`, { status: 'SUSPENDED' });
+    await admin.post(`/admin/organizations/${seedId('org:shapla')}/status`, { status: 'VERIFIED' });
+
+    const stale = await donor.patch('/org', { expectedVersion: v, lng: 90.375 });
+    expect(stale.status).toBe(409);
+    expect(stale.body.error.details).toMatchObject({ current: { version: v + 2, status: 'VERIFIED' }, lastChange: { action: 'org.verified' } });
+    const retry = await donor.patch('/org', { expectedVersion: v + 2, lng: 90.375 });
+    expect(retry.body.org).toMatchObject({ lng: 90.375, status: 'VERIFIED', version: v + 3 });
+  });
+
+  it('the version is required, and a save that changes nothing does not bump it', async () => {
+    const org = await myOrg(donor);
+    const missing = await donor.patch('/org', { address: 'No version given, Dhaka' });
+    expect(missing.status).toBe(400);
+    expect(missing.body.error.details.fieldErrors).toHaveProperty('expectedVersion');
+    const same = await donor.patch('/org', { expectedVersion: org.version, address: org.address, lat: org.lat });
+    expect(same.status).toBe(200);
+    expect((await dbOrg()).version).toBe(org.version);
+  });
+
+  it('colleagues hear about the change in real time', async () => {
+    const colleague = live(donor2);
+    const outsider = live(ngo);
+    await Promise.all([colleague.ready, outsider.ready]);
+    const v = (await myOrg(donor)).version;
+    await donor.patch('/org', { expectedVersion: v, address: 'House 14, Road 7, Dhanmondi, Dhaka' });
+    const e = await colleague.waitFor((x) => x.name === 'org.changed');
+    expect(e.payload).toEqual({ orgId: seedId('org:shapla') });
+    expect(outsider.events.some((x) => x.name === 'org.changed')).toBe(false); // other organizations are not told
+  });
+});
+
 describe('realtime access control', () => {
   it('refuses a socket without a valid session', async () => {
     await expect(live(null).ready).rejects.toThrow(/UNAUTHENTICATED/);

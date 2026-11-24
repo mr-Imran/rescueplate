@@ -1,4 +1,5 @@
-// Three-way merge for listing edits (used when the server reports a version conflict).
+// Three-way merge for edits to a versioned record: listings by default, and the
+// organization page with its own field list (used when the server reports a version conflict).
 //
 //   base   = the listing as it was when the user opened the form
 //   mine   = what the user typed
@@ -19,18 +20,18 @@ export function sameField(field, a, b) {
 }
 
 /** The fields the user actually changed, as a PATCH body (without expectedVersion). */
-export function changedFields(base, mine) {
+export function changedFields(base, mine, fields = EDITABLE_FIELDS) {
   const patch = {};
-  for (const f of EDITABLE_FIELDS) if (!sameField(f, base[f], mine[f])) patch[f] = mine[f];
+  for (const f of fields) if (!sameField(f, base[f], mine[f])) patch[f] = mine[f];
   return patch;
 }
 
-export function threeWayMerge(base, mine, theirs) {
+export function threeWayMerge(base, mine, theirs, fields = EDITABLE_FIELDS) {
   const merged = {};
   const conflicts = [];
   const takenFromTheirs = [];
   const keptMine = [];
-  for (const f of EDITABLE_FIELDS) {
+  for (const f of fields) {
     const iChanged = !sameField(f, base[f], mine[f]);
     const theyChanged = !sameField(f, base[f], theirs[f]);
     if (iChanged && theyChanged && !sameField(f, mine[f], theirs[f])) {

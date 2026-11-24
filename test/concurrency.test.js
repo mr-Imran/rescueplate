@@ -73,8 +73,9 @@ describe('multiple users request the final available resource', () => {
   it('one NGO claiming two listings at once cannot exceed its daily capacity (R2)', async () => {
     // Give Chhoto Tara room for exactly 20 more meals, then ask for 20 on two listings at once.
     const stars = ngos[NGOS.indexOf('stars')];
-    const used = (await stars.get('/org')).body.capacity.used;
-    expect((await stars.patch('/org', { dailyCapacityMeals: used + 20 })).status).toBe(200);
+    const mine = (await stars.get('/org')).body;
+    const used = mine.capacity.used;
+    expect((await stars.patch('/org', { expectedVersion: mine.org.version, dailyCapacityMeals: used + 20 })).status).toBe(200);
     const [a, b] = await Promise.all([postListing(donor, { totalMeals: 100 }), postListing(donor, { totalMeals: 100 })]);
     const results = await Promise.all([claim(stars, a.id, 20), claim(stars, b.id, 20)]);
     const granted = results.filter((r) => r.status === 201).reduce((sum, r) => sum + r.body.decision.granted, 0);
@@ -234,5 +235,44 @@ describe('atomicity: a failure part-way through leaves nothing behind', () => {
     expect(conflict.passed).toBe(true);
     expect(conflict.results.map((r) => r.outcome).sort()).toEqual(['SAVED', 'VERSION_CONFLICT']);
     expect((await admin.get('/admin/integrity')).body).toMatchObject({ ok: true, mismatches: 0 });
+  });
+});
+
+describe('the same guarantees with a larger crowd', () => {
+  it('30 NGOs race for the final meal, then for the final 40 meals: never oversold', async () => {
+    // 30 separate organizations, each signed in as its own user (one browser each).
+    const crowd = await Promise.all(
+      Array.from({ length: 30 }, async (_, i) => {
+        const c = s.client();
+        const res = await c.post('/auth/register', {
+          name: `Crowd Member ${i}`,
+          email: `crowd${i}@example.org`,
+          password: 'correct-horse-battery',
+          role: 'ngo',
+          org: { name: `Crowd Shelter ${i}`, address: `${i + 1} Race Road, Dhaka`, lat: 23.75, lng: 90.39, dailyCapacityMeals: 1000 },
+        });
+        expect(res.status).toBe(201);
+        return c;
+      }),
+    );
+    await query(`UPDATE organizations SET status = 'VERIFIED' WHERE name LIKE 'Crowd Shelter %'`);
+
+    // One meal, 30 simultaneous requests: exactly one winner.
+    const one = await postListing(donor, { totalMeals: 1 });
+    const single = await Promise.all(crowd.map((c) => claim(c, one.id, 1)));
+    expect(single.filter((r) => r.status === 201)).toHaveLength(1);
+    expect(single.filter((r) => r.status === 409 && r.body.error.code === 'SOLD_OUT')).toHaveLength(29);
+    expect(await dbListing(one.id)).toMatchObject({ remaining_meals: 0, status: 'FULLY_CLAIMED' });
+
+    // 40 meals, 30 requests for 3 each (90 wanted): 13 full grants and one partial grant of 1.
+    const forty = await postListing(donor, { totalMeals: 40 });
+    const many = await Promise.all(crowd.map((c) => claim(c, forty.id, 3)));
+    const grants = many.filter((r) => r.status === 201).map((r) => r.body.decision.granted);
+    expect(grants.reduce((a, b) => a + b, 0)).toBe(40);
+    expect(grants.sort((a, b) => a - b)).toEqual([1, ...Array(13).fill(3)]);
+    expect(many.filter((r) => r.status === 409 && r.body.error.code === 'SOLD_OUT')).toHaveLength(16);
+    expect((await dbListing(forty.id)).remaining_meals).toBe(0);
+    expect(await heldMeals(forty.id)).toBe(40);
+    expect(await integrityCheck()).toMatchObject({ ok: true, mismatches: 0, negative: 0 });
   });
 });

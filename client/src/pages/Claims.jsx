@@ -66,44 +66,45 @@ export default function Claims() {
           { value: 'open', label: 'In progress', count: open.length },
           { value: 'closed', label: 'History', count: closed.length },
         ]}
-      />
-      {shown.length === 0 ? (
-        <EmptyState
-          title={tab === 'open' ? 'Nothing in progress' : 'No history yet'}
-          action={
-            isNgo && tab === 'open' ? (
-              <Link className="link" to="/feed">
-                Browse the live feed
-              </Link>
-            ) : null
-          }
-        >
-          {tab === 'open' ? (isNgo ? 'Claim food from the live feed and it will appear here.' : 'New claims appear here automatically.') : 'Finished, cancelled and expired claims are listed here.'}
-        </EmptyState>
-      ) : (
-        <ul className="grid gap-4 md:grid-cols-2">
-          {shown.map((c) => (
-            <ClaimCard key={c.id} claim={c} showCode={isDonor || user.role === 'admin'}>
-              {isNgo && c.status === 'CLAIMED' && <Button onClick={() => setAssigning(c)}>Assign a volunteer</Button>}
-              {isNgo && c.status === 'VOLUNTEER_ASSIGNED' && (
-                <Button variant="secondary" busy={busy === `un:${c.id}`} disabled={Boolean(busy)} onClick={() => run(`un:${c.id}`, () => api.post(`/claims/${c.id}/unassign`), 'Volunteer removed. Assign another one.')}>
-                  Remove volunteer
-                </Button>
-              )}
-              {isNgo && c.status === 'PICKED_UP' && (
-                <Button busy={busy === `dl:${c.id}`} disabled={Boolean(busy)} onClick={() => run(`dl:${c.id}`, () => api.post(`/claims/${c.id}/deliver`), `${mealsText(c.meals)} received. Thank you!`)}>
-                  Confirm we received it
-                </Button>
-              )}
-              {isNgo && (c.status === 'CLAIMED' || c.status === 'VOLUNTEER_ASSIGNED') && (
-                <Button variant="danger" disabled={Boolean(busy)} onClick={() => setCancelling(c)}>
-                  Cancel claim
-                </Button>
-              )}
-            </ClaimCard>
-          ))}
-        </ul>
-      )}
+      >
+        {shown.length === 0 ? (
+          <EmptyState
+            title={tab === 'open' ? 'Nothing in progress' : 'No history yet'}
+            action={
+              isNgo && tab === 'open' ? (
+                <Link className="link" to="/feed">
+                  Browse the live feed
+                </Link>
+              ) : null
+            }
+          >
+            {tab === 'open' ? (isNgo ? 'Claim food from the live feed and it will appear here.' : 'New claims appear here automatically.') : 'Finished, cancelled and expired claims are listed here.'}
+          </EmptyState>
+        ) : (
+          <ul className="grid gap-4 md:grid-cols-2">
+            {shown.map((c) => (
+              <ClaimCard key={c.id} claim={c} showCode={isDonor || user.role === 'admin'}>
+                {isNgo && c.status === 'CLAIMED' && <Button onClick={() => setAssigning(c)}>Assign a volunteer</Button>}
+                {isNgo && c.status === 'VOLUNTEER_ASSIGNED' && (
+                  <Button variant="secondary" busy={busy === `un:${c.id}`} disabled={Boolean(busy)} onClick={() => run(`un:${c.id}`, () => api.post(`/claims/${c.id}/unassign`), 'Volunteer removed. Assign another one.')}>
+                    Remove volunteer
+                  </Button>
+                )}
+                {isNgo && c.status === 'PICKED_UP' && (
+                  <Button busy={busy === `dl:${c.id}`} disabled={Boolean(busy)} onClick={() => run(`dl:${c.id}`, () => api.post(`/claims/${c.id}/deliver`), `${mealsText(c.meals)} received. Thank you!`)}>
+                    Confirm we received it
+                  </Button>
+                )}
+                {isNgo && (c.status === 'CLAIMED' || c.status === 'VOLUNTEER_ASSIGNED') && (
+                  <Button variant="danger" disabled={Boolean(busy)} onClick={() => setCancelling(c)}>
+                    Cancel claim
+                  </Button>
+                )}
+              </ClaimCard>
+            ))}
+          </ul>
+        )}
+      </Tabs>
 
       {assigning && (
         <AssignDialog

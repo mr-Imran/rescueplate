@@ -34,6 +34,10 @@ export const FIELD_LABELS = {
   totalMeals: 'Total meals',
   preparedAt: 'Prepared at',
   safeUntil: 'Safe until',
+  address: 'Address',
+  lat: 'Latitude',
+  lng: 'Longitude',
+  dailyCapacityMeals: 'Daily capacity',
 };
 
 const AUDIT_LABELS = {
@@ -99,6 +103,7 @@ export function formatValue(field, value) {
   if (field === 'foodType') return FOOD_LABELS[value] || value;
   if (field === 'preparedAt' || field === 'safeUntil') return dateTimeFmt.format(new Date(value));
   if (field === 'description') return value || '(empty)';
+  if (field === 'dailyCapacityMeals') return `${value} meals per day`;
   return String(value);
 }
 

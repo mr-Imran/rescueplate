@@ -61,7 +61,7 @@ npm run dev        # PostgreSQL + API (port 3000) + web app (http://localhost:51
 The first start creates the schema and seeds demo data. Other commands:
 
 ```bash
-npm test           # 157 tests against a real PostgreSQL (takes ~25 s)
+npm test           # 166 tests against a real PostgreSQL (takes ~25 s)
 npm run build && npm start   # production build served by the API on http://localhost:3000
 npm run race       # black-box concurrency test over HTTP (pass a URL to test a deployment)
 ```
@@ -111,7 +111,7 @@ Sweeper (time rules) ───────────────────�
 | Validation | `server/lib/validate.js` | zod schema per endpoint, per-field messages |
 | Business rules | `server/domain/rules.js`, `stateMachine.js` | Pure functions, no I/O, unit-tested |
 | Services | `server/services/*` | Each operation is one database transaction |
-| Data | `server/db/migrations/001_init.sql` | 9 tables, foreign keys, CHECK constraints, partial unique indexes |
+| Data | `server/db/migrations/*.sql` | 9 tables, foreign keys, CHECK constraints, partial unique indexes; migrations run in order at startup |
 | Realtime | `server/realtime/bus.js`, `io.js` | Events ride PostgreSQL NOTIFY, delivered only on commit |
 | Background | `server/jobs/sweeper.js` | Expiry and 30-minute release |
 
@@ -133,7 +133,7 @@ Sweeper (time rules) ───────────────────�
 | M04 | Complex business logic | Rules R1–R8 and state machines in `server/domain`; time rules in `jobs/sweeper.js` | Demo console → fast-forward clock; `test/rules.test.js`, `test/workflow.test.js` |
 | M05 | Dynamic data processing | `listListings` (search, 7 filters, 6 sorts, paging, aggregates, distance), `services/stats.js` | Live feed filters, Impact page; `test/listings.test.js` checks totals against raw rows |
 | M06 | Errors & edge cases | zod validation, duplicate-post lock, `lib/errors.js`, client retry and reload states | Post with 0 meals / past time; double-submit; `test/listings.test.js` |
-| M07 | Responsive & accessible | Mobile-first Tailwind; labels, `aria-live`, native `<dialog>`, visible focus, skip link, table view for the chart | Use on a phone; tab through with the keyboard |
+| M07 | Responsive & accessible | Mobile-first Tailwind; labels, `aria-live`, native `<dialog>`, visible focus, skip link, tab strips with arrow-key navigation (WAI-ARIA tabs pattern), table view for the chart | Use on a phone; tab through with the keyboard |
 | M08 | Deployment & docs | `Dockerfile`, `railway.json`, `render.yaml`, this README, `.env.example` | Live URL |
 
 ### Business rules (M04)
@@ -161,7 +161,7 @@ Sweeper (time rules) ───────────────────�
 - **Capacity race:** the NGO row lock makes "one NGO claims two listings at once" respect the daily capacity.
 - **Other races handled the same way:** two volunteers accepting one pickup, claim versus donor edit, duplicate sign-ups, double-posted listings.
 
-**Verify:** Demo console → "Race for the last meals" and "The same request, sent six times"; `npm run race -- <url>`; `test/concurrency.test.js` (8 NGOs for 40 meals, 8 for 1 meal, 10 simultaneous copies of one request, and a simulated failure mid-transaction proving full rollback).
+**Verify:** Demo console → "Race for the last meals" and "The same request, sent six times"; `npm run race -- <url>`; `test/concurrency.test.js` (8 NGOs for 40 meals, 8 for 1 meal, 30 separately registered NGOs for 1 meal and for 40 meals, 10 simultaneous copies of one request, and a simulated failure mid-transaction proving full rollback).
 
 **Limitations:** claims on one very popular listing are processed one at a time (fine at this scale; a queue or partitioned stock would be the next step). Idempotency keys are kept for 24 hours.
 
@@ -173,10 +173,11 @@ Sweeper (time rules) ───────────────────�
 - **Events are transactional:** services call `tx.notify()`, which uses PostgreSQL `NOTIFY` inside the transaction. PostgreSQL delivers it only if the transaction commits, in commit order, to every app instance. A rolled-back change is never broadcast, and no Redis is needed (`realtime/bus.js`).
 - **Conflict detection:** each listing has a `version`. An edit sends the version it was based on; if the row has moved on, the server writes nothing and returns `409 VERSION_CONFLICT` with the latest data and who changed it (`services/listings.js`).
 - **Conflict resolution:** the browser does a three-way merge (`client/src/lib/merge.js`). Fields only one person changed merge automatically; a field both changed opens a dialog to choose. Presence shows who else has the listing open for editing.
+- **Not only listings:** an organization's details carry a `version` too (`002_org_version.sql`, `services/accounts.js → updateMyOrg`). Two staff members saving the Organization page at once, or a save that crosses an admin's verify or suspend, gets the same `409`, the same merge and the same choice dialog instead of a silent last-write-wins.
 - **Consistent shared state:** events carry the full row and its version, and clients keep the higher version, so duplicate or out-of-order events cannot roll the screen back. After a reconnect the client refetches a snapshot. Countdowns use the server clock.
 - **Access control:** sockets authenticate with the session cookie. Listing updates are public; claim events go only to the organizations and volunteer involved and carry ids only. Suspending a user disconnects their socket.
 
-**Verify:** two windows as Donor and Donor (2nd staff), edit the same field of one listing and save both; Demo console → "Two people save the same listing" and "Drop the live connection"; `test/realtime.test.js`, `test/merge.test.js`.
+**Verify:** two windows as Donor and Donor (2nd staff), edit the same field of one listing and save both; Demo console → "Two people save the same listing" and "Drop the live connection"; `test/realtime.test.js`, `test/merge.test.js`. For the organization case: sign in as Donor and Donor (2nd staff), open **Organization → Edit details** in both, change the address in both and save both.
 
 **Limitations:** editing presence is kept in memory per server instance. With several instances Socket.IO needs sticky sessions (or WebSocket-only transport); the data events themselves already work across instances.
 
@@ -197,7 +198,7 @@ Passwords hashed with bcrypt; session tokens are random 256-bit values stored on
 client/src/        React app (pages, components, lib, state)
 server/            Express app, services, domain rules, realtime, jobs, db
 server/db/         migrations, seed data, connection pool and transaction helper
-test/              8 test files, 157 tests (run against a real PostgreSQL)
+test/              8 test files, 166 tests (run against a real PostgreSQL)
 scripts/           local PostgreSQL launcher, HTTP race test
 ```
 

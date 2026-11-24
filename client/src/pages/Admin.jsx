@@ -22,10 +22,11 @@ export default function Admin() {
           { value: 'users', label: 'Users' },
           { value: 'audit', label: 'Audit log' },
         ]}
-      />
-      {tab === 'orgs' && <Organizations />}
-      {tab === 'users' && <Users />}
-      {tab === 'audit' && <Audit />}
+      >
+        {tab === 'orgs' && <Organizations />}
+        {tab === 'users' && <Users />}
+        {tab === 'audit' && <Audit />}
+      </Tabs>
     </>
   );
 }

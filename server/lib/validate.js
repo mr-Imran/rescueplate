@@ -146,7 +146,13 @@ export const schemas = {
   pickup: z.object({ handoverCode: z.string().trim().regex(/^\d{6}$/, 'The handover code is 6 digits.') }),
 
   orgUpdate: z
-    .object({ address: text(5, 300, 'Address').optional(), lat: latitude.optional(), lng: longitude.optional(), dailyCapacityMeals: capacity.optional() })
+    .object({
+      expectedVersion: wholeNumber(1, 2_000_000_000, 'Version'),
+      address: text(5, 300, 'Address').optional(),
+      lat: latitude.optional(),
+      lng: longitude.optional(),
+      dailyCapacityMeals: capacity.optional(),
+    })
     .strict(),
 
   statsQuery: z.object({
