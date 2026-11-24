@@ -1,0 +1,41 @@
+# Deployment on Coolify (Docker Compose build pack).
+# Coolify's own proxy provides the domain and HTTPS, so there is no Caddy here.
+# SERVICE_PASSWORD_POSTGRES is generated and stored by Coolify; nobody types it.
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=rescueplate
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - POSTGRES_DB=rescueplate
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U rescueplate -d rescueplate']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - SERVICE_FQDN_APP_3000
+      - DATABASE_URL=postgres://rescueplate:${SERVICE_PASSWORD_POSTGRES}@db:5432/rescueplate
+      - NODE_ENV=production
+      - PORT=3000
+      - DEMO_MODE=${DEMO_MODE:-true}
+      - DEMO_ACCESS_CODE=${DEMO_ACCESS_CODE:-}
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/health || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  pgdata:
