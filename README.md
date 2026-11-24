@@ -8,7 +8,7 @@
 | Selected track | **World Problem Solver** |
 | Advanced challenges | **A01** Real-Time Data Synchronization · **A05** Concurrency & Transaction Management |
 | GitHub repository | https://github.com/mr-Imran/rescueplate |
-| Live application | _add URL after deploying_ |
+| Live application | https://app-koee3vrv7hlhrwlnopw2qrrg.lazoevento.com |
 | YouTube presentation | _add URL_ |
 
 ## The problem
@@ -74,7 +74,8 @@ All configuration is by environment variable; see [`.env.example`](.env.example)
 
 One container serves the API, the WebSocket endpoint and the built web app. It needs one PostgreSQL database.
 
-- **Your own VPS (used for the live demo):** install Docker, then
+- **Coolify (used for the live demo):** add a Public Git Repository resource with this repo, build pack *Docker Compose*, compose file `/docker-compose.coolify.yml`. Coolify generates the database password and provides the domain and HTTPS.
+- **Your own VPS without a panel:** install Docker, then
   ```bash
   git clone https://github.com/mr-Imran/rescueplate.git && cd rescueplate
   cp .env.vps.example .env    # set DOMAIN and POSTGRES_PASSWORD
