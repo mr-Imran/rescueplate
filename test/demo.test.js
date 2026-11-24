@@ -43,7 +43,7 @@ describe('reset keeps what visitors registered', () => {
 
     // The same browser is still signed in, and the organization kept its verification and join code.
     const after = (await kitchen.get('/org')).body.org;
-    expect(after).toMatchObject({ id: before.id, name: 'Judge Test Kitchen', status: 'VERIFIED', joinCode: before.joinCode });
+    expect(after).toMatchObject({ id: before.id, name: 'Judge Test Kitchen', status: 'VERIFIED', joinCode: before.joinCode, version: before.version + 1 });
     expect((await helper.get('/me')).body.user).toMatchObject({ name: 'Visiting Helper', role: 'volunteer' });
 
     // The password still works from a new browser.

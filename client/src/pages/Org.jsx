@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { ConflictDialog } from '../components/ConflictDialog.jsx';
 import { Alert, Badge, Button, Field, LoadError, Loading, PageHeader, useLoad } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
+import { changedFields, threeWayMerge } from '../lib/merge.js';
 import { useLive } from '../lib/realtime.js';
 import { useAuth } from '../state/auth.jsx';
 import { useToast } from '../state/toast.jsx';
@@ -12,6 +14,8 @@ export default function Org() {
   const toast = useToast();
   const { data, error, reload } = useLoad(() => api.get('/org'), []);
   const [form, setForm] = useState(null);
+  const [base, setBase] = useState(null); // the version the form was opened with
+  const [conflict, setConflict] = useState(null);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -25,12 +29,61 @@ export default function Org() {
   const { org, members, capacity } = data;
   const isNgo = org.type === 'ngo';
 
+  const fields = isNgo ? ['address', 'lat', 'lng', 'dailyCapacityMeals'] : ['address', 'lat', 'lng'];
+  const toForm = (o) => ({ address: o.address, lat: String(o.lat), lng: String(o.lng), capacity: isNgo ? String(o.dailyCapacityMeals) : '' });
+  const fromForm = (f) => ({ address: f.address.trim(), lat: Number(f.lat), lng: Number(f.lng), ...(isNgo ? { dailyCapacityMeals: Number(f.capacity) } : {}) });
+
   const startEdit = () => {
     setErrors({});
-    setForm({ address: org.address, lat: String(org.lat), lng: String(org.lng), capacity: isNgo ? String(org.dailyCapacityMeals) : '' });
+    setBase(org);
+    setForm(toForm(org));
+  };
+  const stopEdit = () => {
+    setForm(null);
+    setConflict(null);
+    setBusy(false);
   };
 
-  const save = async (e) => {
+  /**
+   * Saves with optimistic concurrency, exactly like a listing edit. The request
+   * carries the version the edit was based on. If a colleague or an admin
+   * changed the organization meanwhile, the server answers 409 with the latest
+   * data and we merge field by field:
+   *   - no field changed by both sides  -> re-apply automatically on the latest version
+   *   - a field changed by both sides   -> ask the user (ConflictDialog)
+   */
+  const attemptSave = async (onto, mine, attempt = 0, merged = false) => {
+    const patch = changedFields(onto, mine, fields);
+    setBusy(true);
+    try {
+      if (Object.keys(patch).length > 0) await api.patch('/org', { expectedVersion: onto.version, ...patch });
+      stopEdit();
+      if (merged === 'chosen') toast.success('Your choices were saved on top of the latest version.', { title: 'Conflict resolved' });
+      else if (merged) toast.success('Someone else had also changed these details. Both sets of changes were kept.', { title: 'Saved and merged' });
+      else if (Object.keys(patch).length === 0) toast.info('There were no changes to save.');
+      else toast.success('Organization details updated.');
+      reload({ silent: true });
+      refresh();
+    } catch (err) {
+      if (err.code === 'VERSION_CONFLICT') {
+        const theirs = err.details.current;
+        const result = threeWayMerge(onto, mine, theirs, fields);
+        if (result.conflicts.length === 0 && attempt < 3) return attemptSave(theirs, result.merged, attempt + 1, merged || true);
+        if (result.conflicts.length === 0) toast.error('These details are changing very quickly. Please review them and save again.', { title: 'Not saved' });
+        else setConflict({ ...result, theirs, lastChange: err.details.lastChange });
+        setBase(theirs);
+        setForm(toForm({ ...theirs, ...result.merged }));
+        reload({ silent: true });
+      } else {
+        setErrors(err.fieldErrors);
+        toast.fromError(err, 'Not saved');
+      }
+      setBusy(false);
+    }
+    return undefined;
+  };
+
+  const save = (e) => {
     e.preventDefault();
     if (busy) return;
     const found = {};
@@ -43,20 +96,19 @@ export default function Org() {
     if (isNgo && (!Number.isInteger(cap) || cap < 1 || cap > 100000)) found.dailyCapacityMeals = 'Enter a whole number of meals (1 or more).';
     setErrors(found);
     if (Object.keys(found).length > 0) return;
-    setBusy(true);
-    try {
-      await api.patch('/org', { address: form.address.trim(), lat, lng, ...(isNgo ? { dailyCapacityMeals: cap } : {}) });
-      toast.success('Organization details updated.');
-      setForm(null);
-      reload({ silent: true });
-      refresh();
-    } catch (err) {
-      setErrors(err.fieldErrors);
-      toast.fromError(err, 'Not saved');
-    } finally {
-      setBusy(false);
-    }
+    attemptSave(base, fromForm(form));
   };
+
+  const resolveConflict = (choice) => {
+    const final = { ...conflict.merged };
+    for (const c of conflict.conflicts) final[c.field] = choice[c.field] === 'mine' ? c.mine : c.theirs;
+    const onto = conflict.theirs;
+    setConflict(null);
+    attemptSave(onto, final, 0, 'chosen');
+  };
+
+  // A colleague (or an admin) saved while this form is open: say so before the user saves.
+  const changedMeanwhile = Boolean(form && base && org.version > base.version && !conflict);
 
   const copy = async () => {
     try {
@@ -81,6 +133,11 @@ export default function Org() {
           </h2>
           {form ? (
             <form onSubmit={save} className="space-y-4" noValidate>
+              {changedMeanwhile && (
+                <Alert tone="warning">
+                  These details changed while you were editing. When you save, your changes are merged with the latest version, and you are asked if both of you changed the same field.
+                </Alert>
+              )}
               <Field label="Address" required error={errors.address}>
                 {(p) => <input {...p} className="input" maxLength={300} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />}
               </Field>
@@ -98,7 +155,7 @@ export default function Org() {
                 </Field>
               )}
               <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={() => setForm(null)} disabled={busy}>
+                <Button variant="secondary" onClick={stopEdit} disabled={busy}>
                   Cancel
                 </Button>
                 <Button type="submit" busy={busy}>
@@ -173,6 +230,7 @@ export default function Org() {
           </section>
         </div>
       </div>
+      {conflict && <ConflictDialog conflict={conflict} onResolve={resolveConflict} onDiscard={stopEdit} busy={busy} what="Your organization" />}
     </>
   );
 }

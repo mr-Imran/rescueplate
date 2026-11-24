@@ -245,23 +245,50 @@ export function Countdown({ until, prefix = '', expiredLabel = 'Expired', classN
   );
 }
 
-export function Tabs({ tabs, value, onChange, label }) {
+/**
+ * Tab strip following the WAI-ARIA tabs pattern: one tab stop for the whole
+ * strip, Left/Right/Home/End move between tabs, and the content passed as
+ * children is exposed as the panel that the selected tab controls.
+ */
+export function Tabs({ tabs, value, onChange, label, children }) {
+  const base = useId();
+  const buttons = useRef({});
+  const onKeyDown = (e) => {
+    const i = tabs.findIndex((t) => t.value === value);
+    const last = tabs.length - 1;
+    const next = { ArrowRight: i === last ? 0 : i + 1, ArrowLeft: i === 0 ? last : i - 1, Home: 0, End: last }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    onChange(tabs[next].value);
+    buttons.current[tabs[next].value]?.focus();
+  };
   return (
-    <div className="mb-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-stone-200" role="tablist" aria-label={label}>
-      {tabs.map((t) => (
-        <button
-          key={t.value}
-          type="button"
-          role="tab"
-          aria-selected={value === t.value}
-          onClick={() => onChange(t.value)}
-          className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${value === t.value ? 'border-brand-700 text-brand-800' : 'border-transparent text-stone-600 hover:text-stone-900'}`}
-        >
-          {t.label}
-          {t.count !== undefined && <span className="ml-1.5 rounded-full bg-stone-200 px-1.5 py-0.5 text-xs text-stone-700">{t.count}</span>}
-        </button>
-      ))}
-    </div>
+    <>
+      <div className="mb-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-stone-200" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
+        {tabs.map((t) => (
+          <button
+            key={t.value}
+            ref={(el) => {
+              buttons.current[t.value] = el;
+            }}
+            type="button"
+            role="tab"
+            id={`${base}tab-${t.value}`}
+            aria-selected={value === t.value}
+            aria-controls={`${base}panel`}
+            tabIndex={value === t.value ? 0 : -1}
+            onClick={() => onChange(t.value)}
+            className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${value === t.value ? 'border-brand-700 text-brand-800' : 'border-transparent text-stone-600 hover:text-stone-900'}`}
+          >
+            {t.label}
+            {t.count !== undefined && <span className="ml-1.5 rounded-full bg-stone-200 px-1.5 py-0.5 text-xs text-stone-700">{t.count}</span>}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel" id={`${base}panel`} aria-labelledby={`${base}tab-${value}`}>
+        {children}
+      </div>
+    </>
   );
 }
 

@@ -74,8 +74,19 @@ const toOrg = (r) => ({
   lng: r.lng,
   dailyCapacityMeals: r.daily_capacity_meals,
   status: r.status,
+  version: r.version,
   createdAt: r.created_at,
 });
+
+/** Who last changed this organization, for the conflict message. */
+async function lastOrgChange(tx, orgId) {
+  const { rows } = await tx.query(
+    `SELECT actor_label, action, created_at FROM audit_log
+      WHERE entity_type = 'organization' AND entity_id = $1 ORDER BY id DESC LIMIT 1`,
+    [orgId],
+  );
+  return rows[0] ? { actor: rows[0].actor_label, action: rows[0].action, at: rows[0].created_at } : null;
+}
 
 export async function getMyOrg(viewer) {
   if (!viewer.orgId) throw notFound('Organization');
@@ -94,11 +105,25 @@ export async function getMyOrg(viewer) {
   return { org: { ...toOrg(org.rows[0]), joinCode: org.rows[0].join_code }, members: members.rows, capacity };
 }
 
-export async function updateMyOrg(actor, patch) {
+/**
+ * Staff edit their organization's details, with optimistic concurrency (the
+ * same scheme as listings). The request carries the version the edit was based
+ * on. If a colleague or an admin changed the organization in the meantime,
+ * nothing is written and the caller gets 409 VERSION_CONFLICT with the latest
+ * data, so the browser can merge instead of silently overwriting.
+ */
+export async function updateMyOrg(actor, { expectedVersion, ...patch }) {
   return withTransaction(async (tx) => {
     const { rows } = await tx.query('SELECT * FROM organizations WHERE id = $1 FOR UPDATE', [actor.orgId]);
     const before = rows[0];
     if (!before) throw notFound('Organization');
+    if (before.version !== expectedVersion) {
+      throw conflict('VERSION_CONFLICT', 'Your organization was changed by someone else while you were editing. Review the latest version.', {
+        current: toOrg(before),
+        yourVersion: expectedVersion,
+        lastChange: await lastOrgChange(tx, actor.orgId),
+      });
+    }
     if (patch.dailyCapacityMeals !== undefined && before.type !== 'ngo') {
       throw validationError({ dailyCapacityMeals: 'Only NGOs have a daily capacity.' });
     }
@@ -108,8 +133,12 @@ export async function updateMyOrg(actor, patch) {
       lng: patch.lng ?? before.lng,
       capacity: patch.dailyCapacityMeals ?? before.daily_capacity_meals,
     };
+    const changed = next.address !== before.address || next.lat !== before.lat || next.lng !== before.lng || next.capacity !== before.daily_capacity_meals;
+    if (!changed) return toOrg(before); // nothing to do; do not bump the version
+
     const updated = await tx.query(
-      `UPDATE organizations SET address = $2, lat = $3, lng = $4, daily_capacity_meals = $5, updated_at = now()
+      `UPDATE organizations SET address = $2, lat = $3, lng = $4, daily_capacity_meals = $5,
+              version = version + 1, updated_at = now()
         WHERE id = $1 RETURNING *`,
       [actor.orgId, next.address, next.lat, next.lng, next.capacity],
     );
@@ -140,7 +169,8 @@ export async function adminSetOrgStatus(actor, orgId, status) {
     const { rows } = await tx.query('SELECT * FROM organizations WHERE id = $1 FOR UPDATE', [orgId]);
     if (!rows[0]) throw notFound('Organization');
     if (rows[0].status === status) throw conflict('NO_CHANGE', `This organization is already ${status.toLowerCase()}.`);
-    const updated = await tx.query('UPDATE organizations SET status = $2, updated_at = now() WHERE id = $1 RETURNING *', [orgId, status]);
+    // Every change to the row bumps its version, so staff editing at the same moment are told about it.
+    const updated = await tx.query('UPDATE organizations SET status = $2, version = version + 1, updated_at = now() WHERE id = $1 RETURNING *', [orgId, status]);
     await audit(tx, actor, `org.${status.toLowerCase()}`, 'organization', orgId, { before: { status: rows[0].status }, after: { status } });
     tx.notify({ t: 'org', id: orgId });
     return toOrg(updated.rows[0]);

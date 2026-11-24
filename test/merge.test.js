@@ -46,6 +46,34 @@ describe('three-way merge', () => {
   });
 });
 
+describe('three-way merge of organization details', () => {
+  const FIELDS = ['address', 'lat', 'lng', 'dailyCapacityMeals'];
+  const org = { address: 'House 55, Lalmatia, Dhaka', lat: 23.754, lng: 90.369, dailyCapacityMeals: 150, version: 4 };
+
+  it('merges automatically when two colleagues changed different fields', () => {
+    const mine = { ...org, dailyCapacityMeals: 200 };
+    const theirs = { ...org, address: 'House 56, Lalmatia, Dhaka', version: 5 };
+    const r = threeWayMerge(org, mine, theirs, FIELDS);
+    expect(r.conflicts).toEqual([]);
+    expect(r.merged).toEqual({ address: 'House 56, Lalmatia, Dhaka', lat: 23.754, lng: 90.369, dailyCapacityMeals: 200 });
+    expect(changedFields(theirs, r.merged, FIELDS)).toEqual({ dailyCapacityMeals: 200 }); // only my change is sent
+  });
+
+  it('asks only about the field both changed', () => {
+    const mine = { ...org, dailyCapacityMeals: 200, lat: 23.76 };
+    const theirs = { ...org, dailyCapacityMeals: 120, version: 5 };
+    const r = threeWayMerge(org, mine, theirs, FIELDS);
+    expect(r.conflicts).toEqual([{ field: 'dailyCapacityMeals', base: 150, mine: 200, theirs: 120 }]);
+    expect(r.keptMine).toEqual(['lat']);
+  });
+
+  it('ignores fields outside the list (a donor has no capacity)', () => {
+    const r = threeWayMerge(org, { ...org, dailyCapacityMeals: 1 }, { ...org, dailyCapacityMeals: 2 }, ['address', 'lat', 'lng']);
+    expect(r.conflicts).toEqual([]);
+    expect(r.merged).not.toHaveProperty('dailyCapacityMeals');
+  });
+});
+
 describe('applying live events', () => {
   const items = [
     { id: 'a', version: 3, remainingMeals: 20, distanceKm: 1.2 },
