@@ -47,6 +47,7 @@ export function buildRoutes() {
     res.json({
       demoMode: config.demoMode,
       demoAccessCodeRequired: config.demoMode && Boolean(config.demoAccessCode),
+      demoAutoResetMinutes: config.demoMode ? config.demoAutoResetMinutes : 0,
       personas: config.demoMode ? PERSONAS : [],
       foodTypes: FOOD_TYPES,
       limits: LIMITS,

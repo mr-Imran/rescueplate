@@ -11,6 +11,8 @@ export { query, seedId };
 /** Boots the real app on a random port with freshly seeded demo data. */
 export async function startTestServer({ realtime = false } = {}) {
   await migrate();
+  // A reset keeps accounts that visitors registered, so clear what an earlier test file left behind.
+  await query('TRUNCATE users, organizations CASCADE');
   await resetDemoData();
   const server = http.createServer(createApp());
   let io = null;

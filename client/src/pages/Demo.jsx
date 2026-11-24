@@ -290,7 +290,7 @@ function Integrity() {
         </Verdict>
       )}
       <ConfirmDialog open={confirm} title="Reset all demo data?" confirmLabel="Reset" onConfirm={reset} onClose={() => setConfirm(false)} busy={resetting}>
-        Everything returns to the original sample data and the clock returns to real time. Accounts created by visitors are removed. Demo sign-ins stay signed in.
+        The sample data returns to its original state and the clock returns to real time. Accounts registered by visitors are kept, but their listings and claims are cleared. Everyone stays signed in.
       </ConfirmDialog>
     </Card>
   );

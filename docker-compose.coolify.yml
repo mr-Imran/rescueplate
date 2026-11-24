@@ -30,6 +30,7 @@ services:
       - PORT=3000
       - DEMO_MODE=${DEMO_MODE:-true}
       - DEMO_ACCESS_CODE=${DEMO_ACCESS_CODE:-}
+      - DEMO_AUTO_RESET_MINUTES=${DEMO_AUTO_RESET_MINUTES:-120}
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/health || exit 1']
       interval: 15s

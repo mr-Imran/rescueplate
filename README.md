@@ -47,6 +47,8 @@ Open two browser windows (one normal, one private) with different personas to se
 **Demo console (`/demo`, admin):** one button per judging scenario, each run against the real code paths and database:
 race for the last meals · the same request sent six times · two simultaneous edits · drop the live connection · fast-forward the clock · ledger check · reset demo data.
 
+**The demo looks after itself.** Cooked food is only safe for a few hours, so seeded listings would all expire within a day and the feed would sit empty. Once nobody has changed anything for 2 hours, the sample data is restored: fresh listings, claims at every stage, clock back to real time, every persona usable. It never happens while someone is working, sign-ins survive it, and accounts that visitors registered are kept (`server/db/seed.js → resetDemoIfIdle`, `test/demo.test.js`).
+
 ## Run it locally
 
 Requirements: **Node.js 22.9 or newer**. Nothing else: a real PostgreSQL is bundled for development and tests.
@@ -59,7 +61,7 @@ npm run dev        # PostgreSQL + API (port 3000) + web app (http://localhost:51
 The first start creates the schema and seeds demo data. Other commands:
 
 ```bash
-npm test           # 149 tests against a real PostgreSQL (takes ~25 s)
+npm test           # 157 tests against a real PostgreSQL (takes ~25 s)
 npm run build && npm start   # production build served by the API on http://localhost:3000
 npm run race       # black-box concurrency test over HTTP (pass a URL to test a deployment)
 ```
@@ -68,7 +70,7 @@ To use your own PostgreSQL instead of the bundled one, copy `.env.example` to `.
 
 ### Configuration
 
-All configuration is by environment variable; see [`.env.example`](.env.example). No secret is stored in the repository. Demo accounts get random passwords unless `DEMO_PASSWORD` is set, so they are reachable only through persona sign-in, which can itself be protected with `DEMO_ACCESS_CODE`.
+All configuration is by environment variable; see [`.env.example`](.env.example). No secret is stored in the repository. Demo accounts get random passwords unless `DEMO_PASSWORD` is set, so they are reachable only through persona sign-in, which can itself be protected with `DEMO_ACCESS_CODE`. `DEMO_AUTO_RESET_MINUTES` (default 120, 0 = off) sets how long the demo must be idle before the sample data restores itself.
 
 ## Deploy
 
@@ -187,7 +189,7 @@ Passwords hashed with bcrypt; session tokens are random 256-bit values stored on
 - Locations are entered as coordinates (or the browser's location); there is no map or address lookup.
 - Notifications are in-app only (no SMS or push).
 - Impact weights (0.5 kg per meal, 2.5 kg CO₂e per kg) are stated estimates.
-- The demo clock and demo reset affect everyone using a deployment; they exist for judging and are disabled when `DEMO_MODE` is off.
+- The demo clock and demo reset affect everyone using a deployment; they exist for judging and are disabled when `DEMO_MODE` is off. A reset (manual or automatic) clears listings, claims and the audit log; registered accounts and organizations are kept.
 
 ## Project structure
 
@@ -195,7 +197,7 @@ Passwords hashed with bcrypt; session tokens are random 256-bit values stored on
 client/src/        React app (pages, components, lib, state)
 server/            Express app, services, domain rules, realtime, jobs, db
 server/db/         migrations, seed data, connection pool and transaction helper
-test/              7 test files, 149 tests (run against a real PostgreSQL)
+test/              8 test files, 157 tests (run against a real PostgreSQL)
 scripts/           local PostgreSQL launcher, HTTP race test
 ```
 

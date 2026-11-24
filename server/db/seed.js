@@ -122,7 +122,23 @@ async function insertClaim(tx, c) {
   }
 }
 
-async function seedInto(tx) {
+const SEEDED_ORG_IDS = [...DONORS, ...NGOS].map((o) => seedId(`org:${o.key}`));
+const SEEDED_USER_IDS = USERS.map((u) => seedId(`user:${u.key}`));
+
+/**
+ * Password hashes for the seeded accounts. Demo accounts share DEMO_PASSWORD if
+ * it is set; otherwise each gets a random password nobody knows and the accounts
+ * are reachable only via persona login. Hashing is slow on purpose, so it is done
+ * before the seeding transaction starts and the transaction stays short.
+ */
+async function demoPasswordHashes() {
+  const shared = config.demoPassword ? await hashPassword(config.demoPassword) : null;
+  const hashes = new Map();
+  for (const u of USERS) hashes.set(u.key, shared || (await hashPassword(crypto.randomBytes(24).toString('base64url'))));
+  return hashes;
+}
+
+async function seedInto(tx, hashes) {
   const now = Date.now();
   const rand = rng(20260);
   const pick = (arr) => arr[Math.floor(rand() * arr.length)];
@@ -144,16 +160,12 @@ async function seedInto(tx) {
       [orgId(n.key), n.name, n.address, n.lat, n.lng, n.cap, n.status, seedId(`join:${n.key}`).slice(0, 10).replace('-', '').toUpperCase()],
     );
   }
-  // Demo accounts share DEMO_PASSWORD if it is set; otherwise each gets a random
-  // password nobody knows and the accounts are reachable only via persona login.
-  const sharedHash = config.demoPassword ? await hashPassword(config.demoPassword) : null;
   for (const u of USERS) {
-    const hash = sharedHash || (await hashPassword(crypto.randomBytes(24).toString('base64url')));
     await tx.query('INSERT INTO users (id, name, email, password_hash, role, org_id) VALUES ($1, $2, $3, $4, $5, $6)', [
       userId(u.key),
       u.name,
       personaEmail(u.key),
-      hash,
+      hashes.get(u.key),
       u.role,
       u.org ? orgId(u.org) : null,
     ]);
@@ -338,29 +350,101 @@ async function seedInto(tx) {
 export async function seedDemoIfEmpty() {
   const { rows } = await query('SELECT count(*)::int AS n FROM users');
   if (rows[0].n > 0) return false;
-  await withTransaction(seedInto);
+  const hashes = await demoPasswordHashes();
+  await withTransaction((tx) => seedInto(tx, hashes));
   return true;
 }
 
 /**
- * Restores the demo world. Runs in one transaction, so other users never see a
- * half-reset database. Existing sign-ins of demo personas keep working because
- * seeded user ids are stable and their sessions are carried across.
+ * Restores the demo world inside the caller's transaction, so other users never
+ * see a half-reset database.
+ *
+ * - Sample organizations, accounts, listings and claims return to the seed.
+ * - Accounts and organizations that visitors registered are NOT sample data:
+ *   they are carried across (their listings and claims are cleared with the rest).
+ * - Sign-ins keep working, because seeded ids are stable and live sessions are
+ *   carried across too.
  */
+async function restoreDemoWorld(tx, hashes) {
+  const sessions = await tx.query('SELECT * FROM sessions WHERE revoked_at IS NULL AND expires_at > now()');
+  const orgs = await tx.query('SELECT * FROM organizations WHERE id <> ALL($1::uuid[])', [SEEDED_ORG_IDS]);
+  const users = await tx.query('SELECT * FROM users WHERE id <> ALL($1::uuid[])', [SEEDED_USER_IDS]);
+
+  await tx.query('TRUNCATE audit_log, idempotency_keys, pickups, claims, listings, sessions, users, organizations RESTART IDENTITY CASCADE');
+  await tx.query(`UPDATE app_settings SET value = '{"seconds": 0}' WHERE key = 'clock_offset'`);
+  await seedInto(tx, hashes);
+
+  for (const o of orgs.rows) {
+    await tx.query(
+      `INSERT INTO organizations (id, type, name, address, lat, lng, daily_capacity_meals, status, join_code, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [o.id, o.type, o.name, o.address, o.lat, o.lng, o.daily_capacity_meals, o.status, o.join_code, o.created_at, o.updated_at],
+    );
+  }
+  for (const u of users.rows) {
+    await tx.query(
+      `INSERT INTO users (id, name, email, password_hash, role, org_id, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [u.id, u.name, u.email, u.password_hash, u.role, u.org_id, u.status, u.created_at],
+    );
+  }
+  for (const s of sessions.rows) {
+    await tx.query(
+      `INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at)
+       SELECT $1, $2, $3, $4, $5 WHERE EXISTS (SELECT 1 FROM users WHERE id = $2)`,
+      [s.id, s.user_id, s.token_hash, s.created_at, s.expires_at],
+    );
+  }
+  tx.notify({ t: 'reset' });
+}
+
+/** Restores the demo world now (the "Reset demo data" button). */
 export async function resetDemoData() {
-  await withTransaction(async (tx) => {
-    const sessions = await tx.query('SELECT * FROM sessions WHERE revoked_at IS NULL AND expires_at > now()');
-    await tx.query('TRUNCATE audit_log, idempotency_keys, pickups, claims, listings, sessions, users, organizations RESTART IDENTITY CASCADE');
-    await tx.query(`UPDATE app_settings SET value = '{"seconds": 0}' WHERE key = 'clock_offset'`);
-    await seedInto(tx);
-    for (const s of sessions.rows) {
-      await tx.query(
-        `INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at)
-         SELECT $1, $2, $3, $4, $5 WHERE EXISTS (SELECT 1 FROM users WHERE id = $2)`,
-        [s.id, s.user_id, s.token_hash, s.created_at, s.expires_at],
-      );
-    }
-    tx.notify({ t: 'reset' });
+  const hashes = await demoPasswordHashes();
+  await withTransaction((tx) => restoreDemoWorld(tx, hashes));
+}
+
+/**
+ * Minutes since a person last changed anything, or null if this database does
+ * not hold the demo world.
+ *
+ * Every change in the system writes an audit record in its own transaction, so
+ * the audit log is an exact, restart-proof and multi-instance-safe activity
+ * clock. Records written by the background sweeper (no actor) do not count:
+ * food expiring by itself is not somebody using the app. Real time is used,
+ * not the demo clock.
+ */
+export async function demoIdleMinutes(db = { query }) {
+  const { rows } = await db.query(
+    `SELECT EXTRACT(EPOCH FROM (now() - max(a.created_at))) / 60 AS minutes
+       FROM audit_log a
+      WHERE (a.actor_id IS NOT NULL OR a.action = 'demo.seeded')
+        AND EXISTS (SELECT 1 FROM users WHERE id = $1)`,
+    [seedId('user:admin')],
+  );
+  return rows[0].minutes === null ? null : Number(rows[0].minutes);
+}
+
+/**
+ * Self-healing for a public demo. Seeded food is only safe for a few hours, so
+ * an unattended deployment would soon show an empty feed, and whatever the last
+ * visitor left behind (a fast-forwarded clock, a suspended persona, a used-up
+ * NGO capacity) would greet the next one. Once nobody has changed anything for
+ * `idleMinutes`, the sample data is restored. It never fires while someone is
+ * working, and never on a database without the demo world. Returns true if it reset.
+ */
+export async function resetDemoIfIdle(idleMinutes) {
+  if (!(idleMinutes > 0)) return false;
+  const idle = await demoIdleMinutes(); // cheap check first: no locks, no hashing
+  if (idle === null || idle < idleMinutes) return false;
+  const hashes = await demoPasswordHashes();
+  return withTransaction(async (tx) => {
+    // Several app instances may notice at the same moment: take turns, then look again.
+    await tx.query(`SELECT pg_advisory_xact_lock(hashtext('demo-reset'))`);
+    const now = await demoIdleMinutes(tx);
+    if (now === null || now < idleMinutes) return false;
+    await restoreDemoWorld(tx, hashes);
+    return true;
   });
 }
 

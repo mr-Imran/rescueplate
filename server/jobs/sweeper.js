@@ -8,6 +8,7 @@
 // stored statuses and the live feed up to date.
 import { config } from '../config.js';
 import { query, withTransaction } from '../db/pool.js';
+import { resetDemoIfIdle } from '../db/seed.js';
 import { LIMITS } from '../domain/rules.js';
 import { audit } from '../lib/audit.js';
 import { appNow } from '../lib/clock.js';
@@ -86,7 +87,12 @@ export function startSweeper() {
       // Safe with several app instances: every item is re-checked under its row
       // lock, so a second sweeper finds nothing left to do for it.
       await sweepOnce();
-      if (ticks++ % 360 === 0) await housekeeping();
+      const tick = ticks++;
+      if (tick % 360 === 0) await housekeeping();
+      // Demo mode: restore the sample data once nobody has changed anything for a while.
+      if (config.demoMode && tick % 6 === 0 && (await resetDemoIfIdle(config.demoAutoResetMinutes))) {
+        console.log(`[demo] no changes for ${config.demoAutoResetMinutes} minutes: sample data restored`);
+      }
     } catch (err) {
       console.error('[sweeper] run failed (will retry):', err.message);
     } finally {
