@@ -7,6 +7,7 @@
 | Project title | RescuePlate |
 | Selected track | **World Problem Solver** |
 | Advanced challenges | **A01** Real-Time Data Synchronization · **A05** Concurrency & Transaction Management |
+| GitHub repository | https://github.com/mr-Imran/rescueplate |
 | Live application | _add URL after deploying_ |
 | YouTube presentation | _add URL_ |
 
