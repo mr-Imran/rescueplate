@@ -4,6 +4,9 @@ import { Logo } from '../components/Layout.jsx';
 import { Alert, Button, Field } from '../components/ui.jsx';
 import { homeFor, useAuth } from '../state/auth.jsx';
 
+/** 120 -> "2 hours", 90 -> "90 minutes". */
+const idleLabel = (minutes) => (minutes % 60 === 0 ? `${minutes / 60} hour${minutes === 60 ? '' : 's'}` : `${minutes} minutes`);
+
 export function AuthShell({ children }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
@@ -98,6 +101,11 @@ export default function Login() {
             Try it as…
           </h3>
           <p className="mt-0.5 text-sm text-stone-600">One click signs you in with a demo account. Open two browser windows to see live updates between roles.</p>
+          {config.demoAutoResetMinutes > 0 && (
+            <p className="mt-1 text-xs text-stone-600">
+              The sample data restores itself after {idleLabel(config.demoAutoResetMinutes)} with no changes, so there is always fresh food to claim. Accounts you register are kept.
+            </p>
+          )}
           {config.demoAccessCodeRequired && (
             <Field label="Demo access code" className="mt-3">
               {(p) => <input {...p} className="input" value={accessCode} onChange={(e) => setAccessCode(e.target.value)} autoComplete="off" />}

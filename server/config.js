@@ -26,6 +26,10 @@ export const config = {
   // Password for the seeded demo accounts. If unset, each account gets a random
   // password, so the accounts are reachable only through persona login.
   demoPassword: env.DEMO_PASSWORD || '',
+  // Demo mode only: after this many minutes with no change made by any user, the
+  // sample data is restored, so the feed never sits empty once the seeded food
+  // has passed its safe-until time. 0 switches this off.
+  demoAutoResetMinutes: Math.max(0, Number(env.DEMO_AUTO_RESET_MINUTES ?? 120) || 0),
   adminEmail: env.ADMIN_EMAIL || '',
   adminPassword: env.ADMIN_PASSWORD || '',
   sweepIntervalMs: Number(env.SWEEP_INTERVAL_MS || 10_000),
