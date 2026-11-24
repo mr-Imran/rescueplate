@@ -74,6 +74,14 @@ All configuration is by environment variable; see [`.env.example`](.env.example)
 
 One container serves the API, the WebSocket endpoint and the built web app. It needs one PostgreSQL database.
 
+- **Your own VPS (used for the live demo):** install Docker, then
+  ```bash
+  git clone https://github.com/mr-Imran/rescueplate.git && cd rescueplate
+  cp .env.vps.example .env    # set DOMAIN and POSTGRES_PASSWORD
+  docker compose up -d --build
+  ```
+  `docker-compose.yml` runs PostgreSQL, the app and Caddy, which obtains an HTTPS certificate automatically. Only ports 80 and 443 are exposed. Update later with `git pull && docker compose up -d --build`.
+
 - **Railway:** create a project, add a PostgreSQL service, deploy this repo (it uses the `Dockerfile` via `railway.json`), and set `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `NODE_ENV=production`, `DEMO_MODE=true`.
 - **Render:** "New → Blueprint" on this repo (`render.yaml` creates the web service and database).
 - **Anywhere else:** `docker build -t rescueplate . && docker run -p 3000:3000 -e DATABASE_URL=... -e DEMO_MODE=true rescueplate`
