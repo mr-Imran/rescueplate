@@ -8,7 +8,7 @@
 | Selected track | **World Problem Solver** |
 | Advanced challenges | **A01** Real-Time Data Synchronization · **A05** Concurrency & Transaction Management |
 | GitHub repository | https://github.com/mr-Imran/rescueplate |
-| Live application | https://app-koee3vrv7hlhrwlnopw2qrrg.lazoevento.com |
+| Live application | https://rescueplate.imrann.my.id |
 | YouTube presentation | _add URL_ |
 
 ## The problem
