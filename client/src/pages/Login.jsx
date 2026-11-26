@@ -11,7 +11,9 @@ export function AuthShell({ children }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="flex flex-col justify-between gap-8 bg-brand-800 p-6 text-white sm:p-10">
-        <Logo light />
+        <Link to="/" aria-label="RescuePlate home">
+          <Logo light />
+        </Link>
         <div className="max-w-md">
           <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl">Good food should reach people, not the bin.</h1>
           <p className="mt-2 text-lg font-semibold text-amber-300" lang="bn">
@@ -148,6 +150,10 @@ export default function Login() {
         New here?{' '}
         <Link className="link" to="/register">
           Create an account
+        </Link>
+        {' · '}
+        <Link className="link" to="/">
+          Home
         </Link>
       </p>
     </AuthShell>

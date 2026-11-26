@@ -9,6 +9,7 @@ import Claims from './pages/Claims.jsx';
 import Demo from './pages/Demo.jsx';
 import Feed from './pages/Feed.jsx';
 import Impact from './pages/Impact.jsx';
+import Landing from './pages/Landing.jsx';
 import ListingDetail from './pages/ListingDetail.jsx';
 import ListingNew from './pages/ListingNew.jsx';
 import Login from './pages/Login.jsx';
@@ -56,7 +57,7 @@ function AfterLogin() {
   return <Navigate to={location.state?.from || homeFor(user.role)} replace />;
 }
 
-/** Signed-out visitors are sent to sign-in and returned to where they were going. */
+/** Signed-out visitors hitting an app URL are sent to sign-in (with return path). */
 function ToLogin() {
   const { signedOutByUser } = useAuth();
   const location = useLocation();
@@ -82,11 +83,11 @@ function App() {
   const signedIn = status === 'in';
   return (
     <Routes>
+      <Route path="/" element={signedIn ? <Navigate to={homeFor(user.role)} replace /> : <Landing />} />
       <Route path="/login" element={signedIn ? <AfterLogin /> : <Login />} />
       <Route path="/register" element={signedIn ? <AfterLogin /> : <Register />} />
       {signedIn ? (
         <Route element={<Layout />}>
-          <Route index element={<Navigate to={homeFor(user.role)} replace />} />
           <Route path="/feed" element={<Feed mode="browse" />} />
           <Route path="/listings" element={guard(['donor'], <Feed mode="mine" />)} />
           <Route path="/listings/new" element={guard(['donor'], <ListingNew />)} />

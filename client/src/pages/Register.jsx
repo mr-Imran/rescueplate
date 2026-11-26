@@ -155,6 +155,10 @@ export default function Register() {
         <Link className="link" to="/login">
           Sign in
         </Link>
+        {' · '}
+        <Link className="link" to="/">
+          Home
+        </Link>
       </p>
     </AuthShell>
   );

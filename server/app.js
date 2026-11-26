@@ -24,7 +24,8 @@ export function createApp() {
         directives: {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
           // Free street tiles (Esri) + Nominatim reverse-geocode for location picker / live track.
           imgSrc: ["'self'", 'data:', 'https://server.arcgisonline.com', 'https://*.arcgisonline.com'],
           connectSrc: ["'self'", 'ws:', 'wss:', 'https://nominatim.openstreetmap.org'],

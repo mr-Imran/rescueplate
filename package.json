@@ -18,11 +18,13 @@
     "race": "node scripts/race-test.mjs"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.2",
     "cookie": "^2.0.2",
     "express": "^5.3.0",
     "express-rate-limit": "^8.7.5",
+    "gsap": "^3.15.1",
     "helmet": "^8.3.0",
     "leaflet": "^1.9.4",
     "pg": "^8.23.1",

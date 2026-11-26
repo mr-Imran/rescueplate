@@ -73,7 +73,7 @@ export function Layout() {
   const signOut = async () => {
     setLeaving(true);
     await logout();
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   return (
