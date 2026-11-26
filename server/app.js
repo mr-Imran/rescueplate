@@ -25,8 +25,8 @@ export function createApp() {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
-          // OSM-based map tiles (CARTO) + Nominatim reverse-geocode for location picker / live track.
-          imgSrc: ["'self'", 'data:', 'https://*.basemaps.cartocdn.com'],
+          // Free street tiles (Esri) + Nominatim reverse-geocode for location picker / live track.
+          imgSrc: ["'self'", 'data:', 'https://server.arcgisonline.com', 'https://*.arcgisonline.com'],
           connectSrc: ["'self'", 'ws:', 'wss:', 'https://nominatim.openstreetmap.org'],
           objectSrc: ["'none'"],
           frameAncestors: ["'none'"],

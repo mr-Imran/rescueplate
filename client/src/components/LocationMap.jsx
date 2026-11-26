@@ -13,11 +13,11 @@ const pin = (color, label) =>
     popupAnchor: [0, -30],
   });
 
-// CartoCDN serves OSM data for apps. Direct tile.openstreetmap.org use is blocked (403) by OSM's tile policy.
+// Free raster tiles (no API key). OSM's own tile.openstreetmap.org and CARTO free CDN both block apps.
 const TILES = {
-  url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
   attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    'Tiles &copy; <a href="https://www.esri.com/">Esri</a> · Data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 };
 
 /**
@@ -54,7 +54,7 @@ export function LocationMap({
       scrollWheelZoom: false,
       attributionControl: true,
     });
-    L.tileLayer(TILES.url, { attribution: TILES.attribution, maxZoom: 19, subdomains: 'abcd' }).addTo(map);
+    L.tileLayer(TILES.url, { attribution: TILES.attribution, maxZoom: 19 }).addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
