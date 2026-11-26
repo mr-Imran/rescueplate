@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { ConflictDialog } from '../components/ConflictDialog.jsx';
+import { LocationMap } from '../components/LocationMap.jsx';
+import { LocationPicker } from '../components/LocationPicker.jsx';
 import { Alert, Badge, Button, Field, LoadError, Loading, PageHeader, useLoad } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { changedFields, threeWayMerge } from '../lib/merge.js';
@@ -138,17 +140,16 @@ export default function Org() {
                   These details changed while you were editing. When you save, your changes are merged with the latest version, and you are asked if both of you changed the same field.
                 </Alert>
               )}
-              <Field label="Address" required error={errors.address}>
+              <Field label="Address" required error={errors.address} hint="Filled from the map when empty, or type it yourself.">
                 {(p) => <input {...p} className="input" maxLength={300} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />}
               </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Latitude" required error={errors.lat}>
-                  {(p) => <input {...p} className="input" inputMode="decimal" value={form.lat} onChange={(e) => setForm({ ...form, lat: e.target.value })} />}
-                </Field>
-                <Field label="Longitude" required error={errors.lng}>
-                  {(p) => <input {...p} className="input" inputMode="decimal" value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} />}
-                </Field>
-              </div>
+              <LocationPicker
+                lat={form.lat}
+                lng={form.lng}
+                address={form.address}
+                errors={errors}
+                onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+              />
               {isNgo && (
                 <Field label="Meals you can accept per day" required error={errors.dailyCapacityMeals} hint="Claims in any 24 hours cannot exceed this.">
                   {(p) => <input {...p} className="input" type="number" min="1" max="100000" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />}
@@ -172,8 +173,11 @@ export default function Org() {
                 </div>
                 <div>
                   <dt className="text-stone-500">Location (used for distances)</dt>
-                  <dd className="tabular font-medium">
-                    {org.lat}, {org.lng}
+                  <dd className="mt-2">
+                    <LocationMap lat={org.lat} lng={org.lng} height="11rem" />
+                    <p className="tabular mt-1 text-xs text-stone-500">
+                      {org.lat}, {org.lng}
+                    </p>
                   </dd>
                 </div>
                 {isNgo && (

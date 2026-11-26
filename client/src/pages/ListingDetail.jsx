@@ -4,6 +4,7 @@ import { ClaimDialog } from '../components/ClaimDialog.jsx';
 import { ConflictDialog } from '../components/ConflictDialog.jsx';
 import { DietBadge, displayStatus, isClaimable, MealsBar } from '../components/ListingCard.jsx';
 import { ListingForm, validateListing } from '../components/ListingForm.jsx';
+import { LocationMap } from '../components/LocationMap.jsx';
 import { Alert, Badge, Button, ConfirmDialog, Countdown, LoadError, Loading, useLoad, useNow } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { ago, auditLabel, CLAIM_STATUS, clockTime, FIELD_LABELS, FOOD_LABELS, fullTime, meals as mealsText } from '../lib/format.js';
@@ -268,6 +269,17 @@ export default function ListingDetail() {
                 </dd>
               </div>
             </dl>
+            {Number.isFinite(listing.donor?.lat) && Number.isFinite(listing.donor?.lng) && (
+              <div className="mt-5">
+                <p className="mb-2 text-sm font-medium text-stone-800">Pickup location</p>
+                <LocationMap
+                  lat={listing.donor.lat}
+                  lng={listing.donor.lng}
+                  markers={[{ lat: listing.donor.lat, lng: listing.donor.lng, label: 'Collect', color: '#b45309', popup: `${listing.donor.name}<br>${listing.donor.address}` }]}
+                  height="12rem"
+                />
+              </div>
+            )}
           </>
         )}
       </section>

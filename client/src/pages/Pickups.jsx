@@ -76,7 +76,7 @@ export default function Pickups() {
           ) : (
             <ul className="grid gap-4 md:grid-cols-2">
               {active.map((c) => (
-                <ClaimCard key={c.id} claim={c}>
+                <ClaimCard key={c.id} claim={c} trackLocation>
                   {c.status === 'VOLUNTEER_ASSIGNED' && (
                     <>
                       <Button onClick={() => setCollecting(c)} disabled={Boolean(busy)}>
@@ -109,7 +109,7 @@ export default function Pickups() {
             ) : (
               <ul className="grid gap-4 md:grid-cols-2">
                 {board.data.map((c) => (
-                  <ClaimCard key={c.id} claim={c}>
+                  <ClaimCard key={c.id} claim={c} trackLocation>
                     <Button busy={busy === `ac:${c.id}`} disabled={Boolean(busy) || full} onClick={() => run(`ac:${c.id}`, () => api.post(`/claims/${c.id}/accept`), 'Pickup accepted. It is in "My pickups".')}>
                       Accept this pickup
                     </Button>

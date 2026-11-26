@@ -187,7 +187,7 @@ Passwords hashed with bcrypt; session tokens are random 256-bit values stored on
 
 ## Known limitations
 
-- Locations are entered as coordinates (or the browser's location); there is no map or address lookup.
+- Locations use OpenStreetMap (click/drag pin, GPS, or coordinates) with optional Nominatim address lookup; volunteer pickups can show a live GPS track on the donor→NGO route.
 - Notifications are in-app only (no SMS or push).
 - Impact weights (0.5 kg per meal, 2.5 kg CO₂e per kg) are stated estimates.
 - The demo clock and demo reset affect everyone using a deployment; they exist for judging and are disabled when `DEMO_MODE` is off. A reset (manual or automatic) clears listings, claims and the audit log; registered accounts and organizations are kept.

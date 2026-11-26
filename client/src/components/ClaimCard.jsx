@@ -1,15 +1,18 @@
 import { Link } from 'react-router-dom';
 import { CLAIM_STATUS, clockTime, FOOD_LABELS, meals as mealsText } from '../lib/format.js';
+import { LiveTrackMap } from './LocationPicker.jsx';
+import { LocationMap } from './LocationMap.jsx';
 import { Badge, Countdown, useNow } from './ui.jsx';
 
 const OPEN = ['CLAIMED', 'VOLUNTEER_ASSIGNED', 'PICKED_UP'];
 
 /** One claim with its route (donor -> NGO), deadline and status. Actions are passed in as children. */
-export function ClaimCard({ claim, children, showCode = false }) {
+export function ClaimCard({ claim, children, showCode = false, trackLocation = false }) {
   const now = useNow(1000);
   const status = CLAIM_STATUS[claim.status];
   const open = OPEN.includes(claim.status);
   const beforePickup = claim.status === 'CLAIMED' || claim.status === 'VOLUNTEER_ASSIGNED';
+  const hasRoute = Number.isFinite(claim.donor?.lat) && Number.isFinite(claim.ngo?.lat);
   return (
     <li className="card flex flex-col gap-3 p-4">
       <div className="flex items-start justify-between gap-2">
@@ -35,6 +38,23 @@ export function ClaimCard({ claim, children, showCode = false }) {
           <dd className="text-stone-600">{claim.ngo.address}</dd>
         </div>
       </dl>
+      {hasRoute && (
+        <div>
+          {trackLocation && open ? (
+            <LiveTrackMap donor={claim.donor} ngo={claim.ngo} />
+          ) : (
+            <LocationMap
+              markers={[
+                { lat: claim.donor.lat, lng: claim.donor.lng, label: 'Collect', color: '#b45309', popup: claim.donor.name },
+                { lat: claim.ngo.lat, lng: claim.ngo.lng, label: 'Deliver', color: '#047857', popup: claim.ngo.name },
+              ]}
+              path
+              height="11rem"
+              zoom={13}
+            />
+          )}
+        </div>
+      )}
       {open && (
         <p className="text-sm text-stone-700">
           {beforePickup ? (

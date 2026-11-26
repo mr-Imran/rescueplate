@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { LocationPicker } from '../components/LocationPicker.jsx';
 import { Alert, Button, Field } from '../components/ui.jsx';
 import { useAuth } from '../state/auth.jsx';
 import { AuthShell } from './Login.jsx';
@@ -41,24 +42,7 @@ export default function Register() {
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [locating, setLocating] = useState(false);
   const set = (key) => (e) => setF((prev) => ({ ...prev, [key]: e.target.value }));
-
-  const locate = () => {
-    if (!navigator.geolocation) return setErrors((e) => ({ ...e, 'org.lat': 'This browser cannot share a location. Type the coordinates instead.' }));
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setF((prev) => ({ ...prev, lat: pos.coords.latitude.toFixed(5), lng: pos.coords.longitude.toFixed(5) }));
-        setLocating(false);
-      },
-      () => {
-        setErrors((e) => ({ ...e, 'org.lat': 'Location was not shared. Type the coordinates instead.' }));
-        setLocating(false);
-      },
-      { timeout: 8000 },
-    );
-  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -140,20 +124,17 @@ export default function Register() {
                 <Field label="Organization name" required error={errors['org.name']}>
                   {(p) => <input {...p} className="input" maxLength={120} value={f.orgName} onChange={set('orgName')} />}
                 </Field>
-                <Field label="Address" required error={errors['org.address']}>
+                <Field label="Address" required error={errors['org.address']} hint="Filled from the map when empty, or type it yourself.">
                   {(p) => <input {...p} className="input" autoComplete="street-address" maxLength={300} value={f.address} onChange={set('address')} />}
                 </Field>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Latitude" required error={errors['org.lat']}>
-                    {(p) => <input {...p} className="input" inputMode="decimal" placeholder="23.7461" value={f.lat} onChange={set('lat')} />}
-                  </Field>
-                  <Field label="Longitude" required error={errors['org.lng']}>
-                    {(p) => <input {...p} className="input" inputMode="decimal" placeholder="90.3742" value={f.lng} onChange={set('lng')} />}
-                  </Field>
-                </div>
-                <Button variant="secondary" onClick={locate} busy={locating}>
-                  Use my current location
-                </Button>
+                <LocationPicker
+                  lat={f.lat}
+                  lng={f.lng}
+                  address={f.address}
+                  errors={errors}
+                  errorKeys={{ lat: 'org.lat', lng: 'org.lng', address: 'org.address' }}
+                  onChange={(patch) => setF((prev) => ({ ...prev, ...patch }))}
+                />
                 {f.role === 'ngo' && (
                   <Field label="Meals you can accept per day" required error={errors['org.dailyCapacityMeals']} hint="Claims are limited to this amount per 24 hours, so food is shared fairly.">
                     {(p) => <input {...p} className="input" type="number" min="1" max="100000" inputMode="numeric" value={f.capacity} onChange={set('capacity')} />}
