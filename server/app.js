@@ -25,8 +25,8 @@ export function createApp() {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
-          // OpenStreetMap tiles + Nominatim reverse-geocode for the location picker / live track maps.
-          imgSrc: ["'self'", 'data:', 'https://*.tile.openstreetmap.org'],
+          // OSM-based map tiles (CARTO) + Nominatim reverse-geocode for location picker / live track.
+          imgSrc: ["'self'", 'data:', 'https://*.basemaps.cartocdn.com'],
           connectSrc: ["'self'", 'ws:', 'wss:', 'https://nominatim.openstreetmap.org'],
           objectSrc: ["'none'"],
           frameAncestors: ["'none'"],

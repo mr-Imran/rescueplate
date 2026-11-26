@@ -13,9 +13,11 @@ const pin = (color, label) =>
     popupAnchor: [0, -30],
   });
 
-const OSM = {
-  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+// CartoCDN serves OSM data for apps. Direct tile.openstreetmap.org use is blocked (403) by OSM's tile policy.
+const TILES = {
+  url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  attribution:
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
 };
 
 /**
@@ -52,7 +54,7 @@ export function LocationMap({
       scrollWheelZoom: false,
       attributionControl: true,
     });
-    L.tileLayer(OSM.url, { attribution: OSM.attribution, maxZoom: 19 }).addTo(map);
+    L.tileLayer(TILES.url, { attribution: TILES.attribution, maxZoom: 19, subdomains: 'abcd' }).addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
