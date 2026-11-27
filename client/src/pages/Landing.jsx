@@ -8,121 +8,47 @@ import { useAuth } from '../state/auth.jsx';
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
-/** Full-bleed SVG scene: kitchen surplus moving across Dhaka to a shelter. */
-function HeroScene() {
-  return (
-    <svg className="hero-scene h-full w-full" viewBox="0 0 960 720" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0.3" y2="1">
-          <stop offset="0%" stopColor="#0b3d2e" />
-          <stop offset="55%" stopColor="#065f46" />
-          <stop offset="100%" stopColor="#134e3a" />
-        </linearGradient>
-        <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.45" />
-          <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
-        </linearGradient>
-        <linearGradient id="road" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.15" />
-          <stop offset="50%" stopColor="#fbbf24" stopOpacity="0.55" />
-          <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.15" />
-        </linearGradient>
-      </defs>
+const HERO_IMG =
+  'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=2000&q=80';
 
-      <rect width="960" height="720" fill="url(#sky)" />
-      <ellipse className="hero-glow" cx="180" cy="520" rx="220" ry="160" fill="url(#glow)" />
-
-      {/* Distant city silhouette */}
-      <g className="hero-skyline" fill="#043d2e" opacity="0.55">
-        <rect x="40" y="280" width="48" height="160" rx="2" />
-        <rect x="100" y="240" width="36" height="200" rx="2" />
-        <rect x="148" y="300" width="70" height="140" rx="2" />
-        <rect x="230" y="260" width="44" height="180" rx="2" />
-        <rect x="290" y="310" width="56" height="130" rx="2" />
-        <rect x="620" y="270" width="60" height="170" rx="2" />
-        <rect x="700" y="230" width="40" height="210" rx="2" />
-        <rect x="760" y="290" width="80" height="150" rx="2" />
-        <rect x="860" y="250" width="50" height="190" rx="2" />
-      </g>
-
-      {/* Route path */}
-      <path
-        className="hero-route"
-        d="M160 480 C 280 420, 360 560, 480 480 S 700 400, 800 460"
-        fill="none"
-        stroke="url(#road)"
-        strokeWidth="3"
-        strokeDasharray="10 12"
-        strokeLinecap="round"
-      />
-
-      {/* Kitchen block */}
-      <g className="hero-kitchen" transform="translate(90 400)">
-        <rect x="0" y="40" width="140" height="100" rx="10" fill="#ecfdf5" />
-        <rect x="0" y="40" width="140" height="28" rx="10" fill="#f59e0b" />
-        <rect x="0" y="58" width="140" height="10" fill="#f59e0b" />
-        <text x="70" y="58" textAnchor="middle" fill="#064e3b" fontSize="13" fontWeight="700" fontFamily="Syne, sans-serif">
-          Kitchen
-        </text>
-        <circle cx="36" cy="100" r="10" fill="#065f46" />
-        <circle cx="70" cy="100" r="10" fill="#047857" />
-        <circle cx="104" cy="100" r="10" fill="#f59e0b" />
-      </g>
-
-      {/* Moving plate along the route */}
-      <g className="hero-plate" transform="translate(160 480)">
-        <circle r="22" fill="#fff7ed" stroke="#f59e0b" strokeWidth="3" />
-        <circle r="12" fill="#fbbf24" opacity="0.85" />
-        <circle cx="-4" cy="-3" r="3.5" fill="#065f46" />
-        <circle cx="5" cy="2" r="2.8" fill="#047857" />
-      </g>
-
-      {/* Courier */}
-      <g className="hero-courier" transform="translate(470 455)">
-        <circle r="16" fill="#fef3c7" stroke="#065f46" strokeWidth="2.5" />
-        <path d="M-18 8 h36" stroke="#065f46" strokeWidth="3" strokeLinecap="round" />
-        <circle cx="-14" cy="14" r="5" fill="none" stroke="#065f46" strokeWidth="2" />
-        <circle cx="14" cy="14" r="5" fill="none" stroke="#065f46" strokeWidth="2" />
-      </g>
-
-      {/* Shelter block */}
-      <g className="hero-shelter" transform="translate(730 400)">
-        <rect x="0" y="40" width="150" height="100" rx="10" fill="#ecfdf5" />
-        <path d="M-8 48 L75 8 L158 48 Z" fill="#065f46" />
-        <text x="75" y="78" textAnchor="middle" fill="#064e3b" fontSize="13" fontWeight="700" fontFamily="Syne, sans-serif">
-          Shelter
-        </text>
-        <rect x="55" y="92" width="40" height="48" rx="4" fill="#f59e0b" />
-      </g>
-
-      {/* Floating steam / particles */}
-      <g className="hero-steam" fill="#fef3c7" opacity="0.55">
-        <circle className="steam" cx="150" cy="390" r="4" />
-        <circle className="steam" cx="175" cy="370" r="3" />
-        <circle className="steam" cx="200" cy="395" r="3.5" />
-        <circle className="steam" cx="480" cy="430" r="3" />
-        <circle className="steam" cx="520" cy="410" r="2.5" />
-        <circle className="steam" cx="780" cy="380" r="3.5" />
-      </g>
-    </svg>
-  );
-}
+const STRIPS = [
+  {
+    src: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80',
+    label: 'Kitchen surplus',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?auto=format&fit=crop&w=800&q=80',
+    label: 'Ready to move',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=800&q=80',
+    label: 'Volunteer route',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=800&q=80',
+    label: 'Shared plates',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&w=800&q=80',
+    label: 'Shelter tables',
+  },
+];
 
 const STEPS = [
   {
     n: '01',
-    title: 'Kitchens post surplus',
-    body: 'A restaurant or hall lists leftover meals with a hard safe-until deadline. The feed updates the moment it goes live.',
+    title: 'Post surplus',
+    body: 'Kitchens list leftover meals with a hard safe-until time. The feed updates the moment food goes live.',
   },
   {
     n: '02',
-    title: 'NGOs claim what they can take',
-    body: 'Nearby shelters see distance and capacity limits, then claim meals before the food expires.',
+    title: 'Claim nearby',
+    body: 'NGOs see distance and capacity, then claim what they can take before the food expires.',
   },
   {
     n: '03',
-    title: 'Volunteers close the loop',
-    body: 'A volunteer collects with a handover code, delivers to the NGO, and every meal is counted in the impact ledger.',
+    title: 'Deliver fast',
+    body: 'Volunteers collect with a handover code, follow the map, and close the loop at the shelter.',
   },
 ];
 
@@ -133,232 +59,240 @@ export default function Landing() {
   useGSAP(
     () => {
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
       if (reduce) {
-        gsap.set(
-          ['.hero-brand', '.hero-letter', '.hero-line', '.hero-sub', '.hero-cta', '.hero-nav', '.hero-scene', '.lp-step', '.lp-flow-item', '.lp-cta-block > *'],
-          { clearProps: 'all', opacity: 1 },
-        );
+        gsap.set('.lp-anim', { clearProps: 'all', opacity: 1, y: 0 });
         return;
       }
 
       const intro = gsap.timeline({ defaults: { ease: 'power3.out' } });
       intro
-        .from('.hero-nav > *', { y: -20, opacity: 0, duration: 0.55, stagger: 0.08 })
-        .from('.hero-letter', { y: 48, opacity: 0, duration: 0.7, stagger: { each: 0.045, from: 'start' }, ease: 'power3.out' }, '-=0.25')
-        .from('.hero-line', { y: 28, opacity: 0, duration: 0.7 }, '-=0.35')
-        .from('.hero-sub', { y: 20, opacity: 0, duration: 0.6 }, '-=0.4')
-        .from('.hero-cta a', { y: 18, opacity: 0, duration: 0.5, stagger: 0.12 }, '-=0.3')
-        .from(
-          ['.hero-skyline', '.hero-kitchen', '.hero-route', '.hero-courier', '.hero-shelter', '.hero-plate', '.hero-steam'],
-          { opacity: 0, y: 24, duration: 0.7, stagger: 0.09, ease: 'power2.out' },
-          0.2,
-        );
+        .from('.lp-nav', { y: -28, opacity: 0, duration: 0.7 })
+        .from('.lp-hero-media', { scale: 1.08, opacity: 0, duration: 1.35, ease: 'power2.out' }, 0)
+        .from('.lp-brand-letter', { y: 56, opacity: 0, duration: 0.75, stagger: 0.04 }, 0.25)
+        .from('.lp-hero-line', { y: 32, opacity: 0, duration: 0.7 }, '-=0.35')
+        .from('.lp-hero-sub', { y: 22, opacity: 0, duration: 0.6 }, '-=0.4')
+        .from('.lp-hero-cta a', { y: 18, opacity: 0, duration: 0.5, stagger: 0.12 }, '-=0.3')
+        .from('.lp-scroll-hint', { opacity: 0, y: 10, duration: 0.5 }, '-=0.1');
 
-      // Plate travels kitchen → shelter along the dashed route, then loops.
-      gsap.fromTo(
-        '.hero-plate',
-        { x: 0, y: 0 },
-        {
-          keyframes: [
-            { x: 160, y: -55, duration: 2.4, ease: 'sine.inOut' },
-            { x: 320, y: 15, duration: 2.4, ease: 'sine.inOut' },
-            { x: 500, y: -35, duration: 2.6, ease: 'sine.inOut' },
-            { x: 640, y: -10, duration: 2.2, ease: 'sine.inOut' },
-            { x: 0, y: 0, duration: 0.01 },
-          ],
-          repeat: -1,
-          repeatDelay: 0.35,
-        },
-      );
-
-      gsap.to('.hero-courier', {
-        y: '+=8',
-        duration: 1.6,
-        yoyo: true,
-        repeat: -1,
-        ease: 'sine.inOut',
-      });
-
-      gsap.to('.hero-route', {
-        strokeDashoffset: -44,
-        duration: 2.8,
-        repeat: -1,
-        ease: 'none',
-      });
-
-      gsap.to('.steam', {
-        y: -28,
-        opacity: 0,
-        duration: 2.4,
-        stagger: { each: 0.35, repeat: -1 },
-        ease: 'power1.out',
-      });
-
-      gsap.to('.hero-glow', {
-        opacity: 0.55,
-        scale: 1.08,
-        transformOrigin: 'center',
-        duration: 3.2,
-        yoyo: true,
-        repeat: -1,
-        ease: 'sine.inOut',
-      });
-
-      // Scroll: section headers then staggered children
-      gsap.from('.lp-how-head > *', {
+      gsap.from('.lp-journey-copy > *', {
         y: 36,
         opacity: 0,
-        duration: 0.7,
+        duration: 0.75,
         stagger: 0.12,
         ease: 'power3.out',
-        scrollTrigger: { trigger: '.lp-section', start: 'top 78%', toggleActions: 'play none none reverse' },
+        scrollTrigger: { trigger: '#journey', start: 'top 75%', toggleActions: 'play none none reverse' },
+      });
+
+      gsap.from('.lp-strip', {
+        y: 80,
+        opacity: 0,
+        duration: 0.9,
+        stagger: { each: 0.1, from: 'center' },
+        ease: 'power3.out',
+        scrollTrigger: { trigger: '.lp-strips', start: 'top 78%', toggleActions: 'play none none reverse' },
+      });
+
+      gsap.from('.lp-how-copy > *', {
+        y: 36,
+        opacity: 0,
+        duration: 0.75,
+        stagger: 0.12,
+        ease: 'power3.out',
+        scrollTrigger: { trigger: '#how', start: 'top 75%', toggleActions: 'play none none reverse' },
       });
 
       gsap.from('.lp-step', {
-        y: 56,
+        y: 50,
         opacity: 0,
-        duration: 0.85,
-        stagger: { each: 0.16, from: 'start' },
+        duration: 0.8,
+        stagger: 0.15,
         ease: 'power3.out',
-        scrollTrigger: { trigger: '.lp-steps', start: 'top 82%', toggleActions: 'play none none reverse' },
+        scrollTrigger: { trigger: '.lp-steps', start: 'top 80%', toggleActions: 'play none none reverse' },
       });
 
-      gsap.from('.lp-flow-head > *', {
-        y: 32,
+      gsap.from('.lp-stat', {
+        y: 40,
         opacity: 0,
         duration: 0.7,
         stagger: 0.12,
         ease: 'power3.out',
-        scrollTrigger: { trigger: '.lp-flow', start: 'top 78%', toggleActions: 'play none none reverse' },
+        scrollTrigger: { trigger: '.lp-stats', start: 'top 80%', toggleActions: 'play none none reverse' },
       });
 
-      gsap.from('.lp-flow-item', {
-        y: 44,
-        opacity: 0,
-        duration: 0.75,
-        stagger: { each: 0.14, from: 'start' },
-        ease: 'power3.out',
-        scrollTrigger: { trigger: '.lp-flow-grid', start: 'top 80%', toggleActions: 'play none none reverse' },
-      });
-
-      gsap.from('.lp-cta-block > *', {
+      gsap.from('.lp-close > *', {
         y: 28,
         opacity: 0,
         duration: 0.65,
-        stagger: { each: 0.1, from: 'start' },
+        stagger: 0.1,
         ease: 'power3.out',
-        scrollTrigger: { trigger: '.lp-cta-block', start: 'top 80%', toggleActions: 'play none none reverse' },
+        scrollTrigger: { trigger: '.lp-close', start: 'top 82%', toggleActions: 'play none none reverse' },
+      });
+
+      // Slow vertical drift on strips while in view
+      gsap.utils.toArray('.lp-strip-img').forEach((img, i) => {
+        gsap.to(img, {
+          yPercent: i % 2 === 0 ? -6 : 6,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: '.lp-strips',
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: true,
+          },
+        });
       });
     },
     { scope: root },
   );
 
   return (
-    <div ref={root} className="landing bg-[var(--lp-bg)] text-[var(--lp-ink)]">
-      {/* —— Hero: one composition —— */}
-      <header className="relative isolate min-h-[100svh] overflow-hidden">
-        <div className="absolute inset-0">
-          <HeroScene />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#042f24]/92 via-[#042f24]/72 to-[#042f24]/35" />
-          <div className="pointer-events-none absolute inset-0 lp-grain" />
+    <div ref={root} className="landing font-sans text-stone-900">
+      {/* —— Hero: full-bleed photo, brand first —— */}
+      <header className="relative isolate flex min-h-[100svh] flex-col overflow-hidden bg-brand-950 text-white">
+        <div className="lp-hero-media absolute inset-0">
+          <img src={HERO_IMG} alt="" className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-brand-950/70 via-brand-950/55 to-brand-950/85" />
+          <div className="pointer-events-none absolute inset-0 lp-grain opacity-30" />
         </div>
 
-        <nav className="hero-nav relative z-10 mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
+        <nav className="lp-nav lp-anim relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
           <Logo light />
-          <div className="flex items-center gap-3 text-sm">
+          <div className="flex items-center gap-4 text-sm">
+            <a href="#how" className="hidden font-semibold text-white/80 underline-offset-4 hover:text-white hover:underline sm:inline">
+              How it works
+            </a>
             <Link to="/login" className="font-semibold text-white/90 underline-offset-4 hover:underline">
               Sign in
             </Link>
             <Link
               to="/register"
-              className="inline-flex min-h-10 items-center rounded-lg bg-amber-400 px-4 py-2 font-semibold text-brand-900 transition hover:bg-amber-300"
+              className="inline-flex min-h-10 items-center rounded-md bg-white px-4 py-2 font-bold text-brand-950 transition hover:bg-amber-100"
             >
-              Create account
+              Join
             </Link>
           </div>
         </nav>
 
-        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-5rem)] max-w-6xl flex-col justify-end px-5 pb-16 pt-10 sm:px-8 sm:pb-20 lg:justify-center lg:pb-24">
-          <p className="hero-brand font-display text-5xl font-extrabold tracking-tight text-white sm:text-7xl lg:text-8xl" aria-label="RescuePlate">
+        <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center px-5 pb-24 pt-10 text-center sm:px-8">
+          <p className="lp-anim font-display text-[clamp(2.75rem,10vw,6.5rem)] font-extrabold leading-[0.95] tracking-tight" aria-label="RescuePlate">
             {'RescuePlate'.split('').map((ch, i) => (
-              <span key={`${ch}${i}`} className="hero-letter inline-block">
+              <span key={`${ch}${i}`} className="lp-brand-letter inline-block">
                 {ch}
               </span>
             ))}
           </p>
-          <h1 className="hero-line mt-4 max-w-xl font-display text-2xl font-semibold leading-snug text-amber-200 sm:text-3xl lg:text-4xl">
+          <h1 className="lp-hero-line lp-anim mt-6 max-w-2xl font-display text-2xl font-semibold leading-snug text-amber-200 sm:text-3xl md:text-4xl">
             Surplus food, delivered before it expires.
           </h1>
-          <p className="hero-sub mt-4 max-w-md text-base leading-relaxed text-brand-50/90 sm:text-lg">
-            A live network connecting Dhaka kitchens to nearby NGOs — with volunteers on the route and a hard clock on every meal.
+          <p className="lp-hero-sub lp-anim mt-5 max-w-lg text-base leading-relaxed text-white/85 sm:text-lg">
+            A live network moving meals from Dhaka kitchens to nearby NGOs — with volunteers on the route and a hard clock on every plate.
           </p>
-          <div className="hero-cta mt-8 flex flex-wrap gap-3">
+          <div className="lp-hero-cta lp-anim mt-9 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/login"
-              className="inline-flex min-h-12 items-center rounded-lg bg-white px-6 py-3 text-sm font-bold text-brand-900 transition hover:bg-amber-50"
+              className="inline-flex min-h-12 items-center rounded-md bg-white px-7 py-3 text-sm font-bold text-brand-950 transition hover:bg-amber-50"
             >
               {config?.demoMode ? 'Try the live demo' : 'Sign in'}
             </Link>
             <Link
               to="/register"
-              className="inline-flex min-h-12 items-center rounded-lg border border-white/40 px-6 py-3 text-sm font-bold text-white transition hover:border-white hover:bg-white/10"
+              className="inline-flex min-h-12 items-center rounded-md border border-white/50 px-7 py-3 text-sm font-bold text-white transition hover:border-white hover:bg-white/10"
             >
-              Join as a kitchen or NGO
+              Register your organization
             </Link>
           </div>
         </div>
+
+        <a
+          href="#journey"
+          className="lp-scroll-hint lp-anim absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70"
+        >
+          Scroll
+        </a>
       </header>
 
-      {/* —— How it works —— */}
-      <section className="lp-section mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28" aria-labelledby="how-title">
-        <div className="lp-how-head">
-          <p className="font-display text-sm font-bold uppercase tracking-[0.2em] text-brand-700">How it works</p>
-          <h2 id="how-title" className="mt-3 max-w-2xl font-display text-3xl font-bold tracking-tight text-brand-950 sm:text-4xl">
-            Three moves. No food left waiting on a WhatsApp thread.
-          </h2>
-        </div>
-        <ol className="lp-steps mt-14 grid gap-12 md:grid-cols-3 md:gap-8">
-          {STEPS.map((s) => (
-            <li key={s.n} className="lp-step">
-              <span className="font-display text-4xl font-extrabold text-amber-500/90">{s.n}</span>
-              <h3 className="mt-3 font-display text-xl font-bold text-brand-900">{s.title}</h3>
-              <p className="mt-2 text-[15px] leading-relaxed text-stone-600">{s.body}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {/* —— Live flow —— */}
-      <section className="lp-flow border-y border-brand-900/10 bg-brand-900 text-brand-50" aria-labelledby="flow-title">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
-          <div className="lp-flow-head">
-            <p className="font-display text-sm font-bold uppercase tracking-[0.2em] text-amber-300">Built for the last few hours</p>
-            <h2 id="flow-title" className="mt-3 max-w-2xl font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Real-time claims. Hard food-safety clocks. No silent overwrites.
+      {/* —— Journey strips (Kindness-style staggered panels) —— */}
+      <section id="journey" className="bg-[#f3f1ec] px-4 py-16 sm:px-8 sm:py-24" aria-labelledby="journey-title">
+        <div className="mx-auto max-w-6xl">
+          <div className="lp-journey-copy mx-auto max-w-2xl text-center">
+            <p className="font-display text-sm font-bold uppercase tracking-[0.22em] text-brand-700">The route</p>
+            <h2 id="journey-title" className="mt-3 font-display text-3xl font-bold tracking-tight text-brand-950 sm:text-5xl">
+              From kitchen heat to shelter tables.
             </h2>
+            <p className="mt-4 text-stone-600 sm:text-lg">
+              Every listing carries a safe-until deadline. RescuePlate keeps the path short enough for the food to stay good.
+            </p>
           </div>
-          <div className="lp-flow-grid mt-14 grid gap-10 sm:grid-cols-3">
-            {[
-              { title: 'Live feed', body: 'Listings appear and update the second a kitchen posts or an NGO claims.' },
-              { title: 'Fair capacity', body: 'Each NGO’s daily meal limit keeps one shelter from taking everything.' },
-              { title: 'Mapped routes', body: 'OpenStreetMap pins show where to collect, where to deliver, and where you are.' },
-            ].map((item) => (
-              <div key={item.title} className="lp-flow-item">
-                <h3 className="font-display text-lg font-bold text-amber-200">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-brand-100">{item.body}</p>
-              </div>
+
+          <div className="lp-strips mt-14 flex h-[22rem] gap-2 overflow-hidden sm:h-[28rem] sm:gap-3 md:h-[32rem]">
+            {STRIPS.map((s, i) => (
+              <figure
+                key={s.label}
+                className={`lp-strip relative flex-1 overflow-hidden rounded-2xl ${i % 2 === 0 ? 'mt-0 self-start' : 'mt-8 self-end sm:mt-12'}`}
+                style={{ maxWidth: i === 2 ? '22%' : undefined }}
+              >
+                <img src={s.src} alt="" className="lp-strip-img absolute inset-0 h-[120%] w-full object-cover" />
+                <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-950/80 to-transparent px-3 pb-3 pt-10 text-xs font-semibold text-white sm:text-sm">
+                  {s.label}
+                </figcaption>
+              </figure>
             ))}
           </div>
         </div>
       </section>
 
-      {/* —— Closing CTA —— */}
-      <section className="lp-cta-block mx-auto max-w-6xl px-5 py-24 text-center sm:px-8 sm:py-32" aria-labelledby="cta-title">
-        <p className="font-display text-5xl font-extrabold tracking-tight text-brand-900 sm:text-6xl" id="cta-title">
+      {/* —— How it works —— */}
+      <section id="how" className="bg-white px-5 py-20 sm:px-8 sm:py-28" aria-labelledby="how-title">
+        <div className="mx-auto max-w-6xl">
+          <div className="lp-how-copy max-w-2xl">
+            <p className="font-display text-sm font-bold uppercase tracking-[0.22em] text-brand-700">How it works</p>
+            <h2 id="how-title" className="mt-3 font-display text-3xl font-bold tracking-tight text-brand-950 sm:text-4xl">
+              Three moves. No food left waiting on a WhatsApp thread.
+            </h2>
+          </div>
+          <ol className="lp-steps mt-14 grid gap-12 border-t border-stone-200 pt-12 md:grid-cols-3 md:gap-10">
+            {STEPS.map((s) => (
+              <li key={s.n} className="lp-step">
+                <span className="font-display text-4xl font-extrabold text-amber-500">{s.n}</span>
+                <h3 className="mt-3 font-display text-xl font-bold text-brand-900">{s.title}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-stone-600">{s.body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* —— Why it matters (UNEP context, one job) —— */}
+      <section className="lp-stats bg-brand-900 px-5 py-20 text-brand-50 sm:px-8 sm:py-24" aria-labelledby="why-title">
+        <div className="mx-auto max-w-6xl">
+          <h2 id="why-title" className="max-w-xl font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Built for the last few safe hours.
+          </h2>
+          <p className="mt-4 max-w-xl text-brand-100">
+            Live claims, mapped pickups, and food-safety clocks — so surplus reaches people instead of the bin.
+          </p>
+          <dl className="mt-14 grid gap-10 sm:grid-cols-3">
+            {[
+              { v: '14.1m t', k: 'Food wasted in Bangladeshi homes each year' },
+              { v: '82 kg', k: 'Per person each year (household estimate)' },
+              { v: '19%', k: 'Of the world’s food wasted at consumer level' },
+            ].map((x) => (
+              <div key={x.v} className="lp-stat border-l border-amber-400/50 pl-5">
+                <dt className="font-display text-4xl font-extrabold text-amber-300 sm:text-5xl">{x.v}</dt>
+                <dd className="mt-2 text-sm text-brand-100">{x.k}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-8 text-xs text-brand-200">Source: UNEP Food Waste Index Report 2024.</p>
+        </div>
+      </section>
+
+      {/* —— Close —— */}
+      <section className="lp-close bg-[#f3f1ec] px-5 py-24 text-center sm:px-8 sm:py-32" aria-labelledby="close-title">
+        <p id="close-title" className="font-display text-5xl font-extrabold tracking-tight text-brand-950 sm:text-6xl">
           RescuePlate
         </p>
-        <p className="mx-auto mt-4 max-w-lg text-lg text-stone-600">
+        <p className="mx-auto mt-4 max-w-md text-lg text-stone-600">
           Good food should reach people, not the bin. Start with a demo account or register your organization.
         </p>
         <p className="mt-2 font-medium text-brand-800" lang="bn">
@@ -367,18 +301,18 @@ export default function Landing() {
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           <Link
             to="/login"
-            className="inline-flex min-h-12 items-center rounded-lg bg-brand-800 px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-900"
+            className="inline-flex min-h-12 items-center rounded-md bg-brand-800 px-7 py-3 text-sm font-bold text-white transition hover:bg-brand-900"
           >
             Sign in
           </Link>
           <Link
             to="/register"
-            className="inline-flex min-h-12 items-center rounded-lg border border-brand-800/30 px-6 py-3 text-sm font-bold text-brand-900 transition hover:bg-brand-50"
+            className="inline-flex min-h-12 items-center rounded-md border border-brand-900/25 px-7 py-3 text-sm font-bold text-brand-950 transition hover:bg-white"
           >
             Create account
           </Link>
         </div>
-        <p className="mt-16 text-xs text-stone-500">Hack the Vibe 2026 · World Problem Solver · UNEP Food Waste Index 2024</p>
+        <p className="mt-16 text-xs text-stone-500">Hack the Vibe 2026 · World Problem Solver</p>
       </section>
     </div>
   );
