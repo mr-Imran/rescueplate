@@ -127,13 +127,18 @@
   height: 6px;
 }
 
-.lp-tile {
-  transition: transform 0.25s ease;
+.lp-tile-inner {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 @media (hover: hover) {
-  .lp-tile:hover {
-    transform: translateY(-4px);
+  .lp-tile:hover .lp-tile-inner {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 28px rgb(28 25 23 / 0.12);
+  }
+  .lp-tile-photo:hover img {
+    transform: scale(1.04);
+    transition: transform 0.5s ease;
   }
 }
 

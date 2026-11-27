@@ -51,7 +51,7 @@ export default function Landing() {
     () => {
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (reduce) {
-        gsap.set('.lp-anim', { clearProps: 'all', opacity: 1, y: 0 });
+        gsap.set('.lp-anim, .lp-tile, .lp-chip, .lp-mosaic-copy > *', { clearProps: 'all', opacity: 1, y: 0, scale: 1, rotate: 0 });
         return;
       }
 
@@ -65,23 +65,65 @@ export default function Landing() {
         .from('.lp-hero-cta a', { y: 18, opacity: 0, duration: 0.5, stagger: 0.12 }, '-=0.3')
         .from('.lp-scroll-hint', { opacity: 0, y: 10, duration: 0.5 }, '-=0.1');
 
-      gsap.from('.lp-mosaic-copy > *', {
-        y: 36,
-        opacity: 0,
-        duration: 0.75,
-        stagger: 0.12,
-        ease: 'power3.out',
-        scrollTrigger: { trigger: '#mosaic', start: 'top 75%', toggleActions: 'play none none reverse' },
+      // Mosaic: headline, then tiles pop in left→right with alternating height, then soft float.
+      gsap.set('.lp-tile', { opacity: 0, y: 90, scale: 0.88, rotate: 2 });
+      gsap.set('.lp-chip', { opacity: 0, y: 24, scale: 0.9 });
+      gsap.set('.lp-mosaic-copy > *', { opacity: 0, y: 40 });
+
+      const mosaic = gsap.timeline({
+        defaults: { ease: 'power3.out' },
+        scrollTrigger: {
+          trigger: '#mosaic',
+          start: 'top 70%',
+          toggleActions: 'play none none reverse',
+        },
       });
 
-      gsap.from('.lp-tile', {
-        y: 70,
-        opacity: 0,
-        duration: 0.85,
-        stagger: { each: 0.1, from: 'start' },
-        ease: 'power3.out',
-        scrollTrigger: { trigger: '.lp-mosaic', start: 'top 80%', toggleActions: 'play none none reverse' },
-      });
+      mosaic
+        .to('.lp-mosaic-copy > *', { opacity: 1, y: 0, duration: 0.7, stagger: 0.14 })
+        .to(
+          '.lp-tile',
+          {
+            opacity: 1,
+            y: (i) => (i % 2 === 0 ? 0 : 28),
+            scale: 1,
+            rotate: 0,
+            duration: 0.95,
+            stagger: { each: 0.14, from: 'start' },
+            ease: 'back.out(1.35)',
+          },
+          '-=0.25',
+        )
+        .to('.lp-chip', { opacity: 1, y: 0, scale: 1, duration: 0.55, stagger: 0.12, ease: 'back.out(1.6)' }, '-=0.45')
+        .add(() => {
+          const num = root.current?.querySelector('.lp-stat-num');
+          if (!num) return;
+          const obj = { n: 0 };
+          gsap.to(obj, {
+            n: 82,
+            duration: 1.2,
+            ease: 'power2.out',
+            onUpdate: () => {
+              num.textContent = String(Math.round(obj.n));
+            },
+          });
+        }, '-=0.9')
+        .add(() => {
+          // Idle bob only after the stagger lands, so it doesn't fight the entrance.
+          gsap.utils.toArray('.lp-tile').forEach((tile, i) => {
+            gsap.to(tile, {
+              y: `+=${i % 2 === 0 ? 10 : -12}`,
+              duration: 2.4 + i * 0.25,
+              yoyo: true,
+              repeat: -1,
+              ease: 'sine.inOut',
+              delay: i * 0.1,
+            });
+          });
+          gsap.utils.toArray('.lp-tile-photo img').forEach((img) => {
+            gsap.fromTo(img, { scale: 1 }, { scale: 1.08, duration: 8, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+          });
+        });
 
       gsap.from('.lp-how-copy > *', {
         y: 36,
@@ -202,31 +244,31 @@ export default function Landing() {
 
           <div className="lp-mosaic mt-14 flex gap-3 overflow-x-auto pb-4 sm:gap-4 lg:overflow-visible lg:pb-0">
             {/* Col 1 — impact + tag */}
-            <div className="lp-tile flex w-[11.5rem] shrink-0 flex-col gap-3 sm:w-[13rem]">
-              <div className="flex flex-1 flex-col justify-between rounded-[1.6rem] bg-brand-800 p-5 text-white sm:min-h-[17rem]">
-                <p className="font-display text-5xl font-extrabold tracking-tight sm:text-6xl">82</p>
+            <div className="lp-tile flex w-[11.5rem] shrink-0 flex-col gap-3 will-change-transform sm:w-[13rem]">
+              <div className="lp-tile-inner flex flex-1 flex-col justify-between rounded-[1.6rem] bg-brand-800 p-5 text-white sm:min-h-[17rem]">
+                <p className="lp-stat-num font-display text-5xl font-extrabold tracking-tight sm:text-6xl">0</p>
                 <p className="mt-3 text-sm leading-snug text-brand-100">kg of household food waste per person each year in Bangladesh.</p>
                 <a href="#how" className="mt-5 inline-flex h-10 w-10 items-center justify-center rounded-full bg-lime-300 text-brand-950 transition hover:bg-lime-200" aria-label="How it works">
                   <ArrowIcon />
                 </a>
               </div>
-              <div className="inline-flex items-center gap-2 self-start rounded-2xl bg-stone-800 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wide text-white">
+              <div className="lp-chip inline-flex items-center gap-2 self-start rounded-2xl bg-stone-800 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wide text-white">
                 <span className="inline-block h-2 w-2 rounded-sm bg-amber-400" aria-hidden="true" />
                 Food, not waste
               </div>
             </div>
 
             {/* Col 2 — tall photo */}
-            <figure className="lp-tile relative h-[20rem] w-[12.5rem] shrink-0 overflow-hidden rounded-[1.6rem] sm:h-[24rem] sm:w-[14.5rem]">
-              <img src={IMG.kitchen} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <figure className="lp-tile lp-tile-photo relative h-[20rem] w-[12.5rem] shrink-0 overflow-hidden rounded-[1.6rem] will-change-transform sm:h-[24rem] sm:w-[14.5rem]">
+              <img src={IMG.kitchen} alt="" className="absolute inset-0 h-full w-full origin-center object-cover" />
               <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-4 pb-4 pt-16 text-sm font-semibold leading-snug text-white">
                 Kitchen surplus posted with a hard safe-until deadline
               </figcaption>
             </figure>
 
             {/* Col 3 — join (offset down) */}
-            <div className="lp-tile flex w-[12rem] shrink-0 flex-col justify-end sm:w-[13.5rem] lg:mt-16">
-              <div className="rounded-[1.6rem] bg-stone-200/90 p-5">
+            <div className="lp-tile flex w-[12rem] shrink-0 flex-col justify-end will-change-transform sm:w-[13.5rem] lg:mt-10">
+              <div className="lp-tile-inner rounded-[1.6rem] bg-stone-200/90 p-5">
                 <p className="font-display text-2xl font-bold leading-tight text-stone-900">Join kitchens &amp; NGOs already on the network</p>
                 <Link
                   to="/register"
@@ -239,16 +281,16 @@ export default function Landing() {
             </div>
 
             {/* Col 4 — tall photo */}
-            <figure className="lp-tile relative h-[20rem] w-[12.5rem] shrink-0 overflow-hidden rounded-[1.6rem] sm:h-[24rem] sm:w-[14.5rem]">
-              <img src={IMG.packing} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <figure className="lp-tile lp-tile-photo relative h-[20rem] w-[12.5rem] shrink-0 overflow-hidden rounded-[1.6rem] will-change-transform sm:h-[24rem] sm:w-[14.5rem]">
+              <img src={IMG.packing} alt="" className="absolute inset-0 h-full w-full origin-center object-cover" />
               <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-4 pb-4 pt-16 text-sm font-semibold leading-snug text-white">
                 Volunteers collect and deliver before the clock runs out
               </figcaption>
             </figure>
 
             {/* Col 5 — gallery lime + tag */}
-            <div className="lp-tile flex w-[12rem] shrink-0 flex-col gap-3 sm:w-[13.5rem]">
-              <div className="flex flex-1 flex-col rounded-[1.6rem] bg-lime-300 p-5 text-brand-950 sm:min-h-[17rem]">
+            <div className="lp-tile flex w-[12rem] shrink-0 flex-col gap-3 will-change-transform sm:w-[13.5rem]">
+              <div className="lp-tile-inner flex flex-1 flex-col rounded-[1.6rem] bg-lime-300 p-5 text-brand-950 sm:min-h-[17rem]">
                 <p className="font-display text-3xl font-extrabold tracking-tight">Impact</p>
                 <img src={IMG.meal} alt="" className="mt-4 h-28 w-full rounded-2xl object-cover" />
                 <Link to="/login" className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-bold">
@@ -256,7 +298,7 @@ export default function Landing() {
                   <ArrowIcon />
                 </Link>
               </div>
-              <div className="inline-flex items-center gap-2 self-start rounded-2xl bg-stone-800 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wide text-white">
+              <div className="lp-chip inline-flex items-center gap-2 self-start rounded-2xl bg-stone-800 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wide text-white">
                 <span className="inline-block h-2.5 w-2.5 rounded-sm bg-brand-500" aria-hidden="true" />
                 Kitchen to shelter
               </div>
