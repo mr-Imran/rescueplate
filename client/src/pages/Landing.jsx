@@ -192,15 +192,18 @@ export default function Landing() {
           </div>
         </nav>
 
-        <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center px-5 pb-24 pt-10 text-center sm:px-8">
-          <p className="lp-anim font-display text-[clamp(2.75rem,10vw,6.5rem)] font-extrabold leading-[0.95] tracking-tight" aria-label="RescuePlate">
+        <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-5 pb-24 pt-10 text-center sm:px-8">
+          <p
+            className="lp-anim inline-flex max-w-full whitespace-nowrap font-display text-[clamp(2.15rem,11vw,6.5rem)] font-extrabold leading-none tracking-tight"
+            aria-label="RescuePlate"
+          >
             {'RescuePlate'.split('').map((ch, i) => (
               <span key={`${ch}${i}`} className="lp-brand-letter inline-block">
                 {ch}
               </span>
             ))}
           </p>
-          <h1 className="lp-hero-line lp-anim mt-6 max-w-2xl font-display text-2xl font-semibold leading-snug text-amber-200 sm:text-3xl md:text-4xl">
+          <h1 className="lp-hero-line lp-anim mt-6 max-w-3xl font-display text-2xl font-semibold leading-snug text-amber-200 sm:text-3xl md:text-4xl">
             Surplus food, delivered before it expires.
           </h1>
           <p className="lp-hero-sub lp-anim mt-5 max-w-lg text-base leading-relaxed text-white/85 sm:text-lg">
