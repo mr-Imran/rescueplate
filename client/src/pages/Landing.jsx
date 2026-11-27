@@ -11,28 +11,19 @@ gsap.registerPlugin(useGSAP, ScrollTrigger);
 const HERO_IMG =
   'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=2000&q=80';
 
-const STRIPS = [
-  {
-    src: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80',
-    label: 'Kitchen surplus',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?auto=format&fit=crop&w=800&q=80',
-    label: 'Ready to move',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=800&q=80',
-    label: 'Volunteer route',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=800&q=80',
-    label: 'Shared plates',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&w=800&q=80',
-    label: 'Shelter tables',
-  },
-];
+const IMG = {
+  kitchen: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=900&q=80',
+  packing: 'https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=900&q=80',
+  meal: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=700&q=80',
+};
+
+function ArrowIcon({ className = '' }) {
+  return (
+    <svg viewBox="0 0 20 20" className={`h-4 w-4 ${className}`} fill="none" aria-hidden="true">
+      <path d="M4 10h10M10 5l5 5-5 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 const STEPS = [
   {
@@ -74,22 +65,22 @@ export default function Landing() {
         .from('.lp-hero-cta a', { y: 18, opacity: 0, duration: 0.5, stagger: 0.12 }, '-=0.3')
         .from('.lp-scroll-hint', { opacity: 0, y: 10, duration: 0.5 }, '-=0.1');
 
-      gsap.from('.lp-journey-copy > *', {
+      gsap.from('.lp-mosaic-copy > *', {
         y: 36,
         opacity: 0,
         duration: 0.75,
         stagger: 0.12,
         ease: 'power3.out',
-        scrollTrigger: { trigger: '#journey', start: 'top 75%', toggleActions: 'play none none reverse' },
+        scrollTrigger: { trigger: '#mosaic', start: 'top 75%', toggleActions: 'play none none reverse' },
       });
 
-      gsap.from('.lp-strip', {
-        y: 80,
+      gsap.from('.lp-tile', {
+        y: 70,
         opacity: 0,
-        duration: 0.9,
-        stagger: { each: 0.1, from: 'center' },
+        duration: 0.85,
+        stagger: { each: 0.1, from: 'start' },
         ease: 'power3.out',
-        scrollTrigger: { trigger: '.lp-strips', start: 'top 78%', toggleActions: 'play none none reverse' },
+        scrollTrigger: { trigger: '.lp-mosaic', start: 'top 80%', toggleActions: 'play none none reverse' },
       });
 
       gsap.from('.lp-how-copy > *', {
@@ -126,20 +117,6 @@ export default function Landing() {
         stagger: 0.1,
         ease: 'power3.out',
         scrollTrigger: { trigger: '.lp-close', start: 'top 82%', toggleActions: 'play none none reverse' },
-      });
-
-      // Slow vertical drift on strips while in view
-      gsap.utils.toArray('.lp-strip-img').forEach((img, i) => {
-        gsap.to(img, {
-          yPercent: i % 2 === 0 ? -6 : 6,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: '.lp-strips',
-            start: 'top bottom',
-            end: 'bottom top',
-            scrub: true,
-          },
-        });
       });
     },
     { scope: root },
@@ -204,39 +181,86 @@ export default function Landing() {
         </div>
 
         <a
-          href="#journey"
+          href="#mosaic"
           className="lp-scroll-hint lp-anim absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70"
         >
           Scroll
         </a>
       </header>
 
-      {/* —— Journey strips (Kindness-style staggered panels) —— */}
-      <section id="journey" className="bg-[#f3f1ec] px-4 py-16 sm:px-8 sm:py-24" aria-labelledby="journey-title">
+      {/* —— Staggered mosaic (charity-collage layout) —— */}
+      <section id="mosaic" className="bg-[#f4f2ed] px-4 py-16 sm:px-8 sm:py-24" aria-labelledby="mosaic-title">
         <div className="mx-auto max-w-6xl">
-          <div className="lp-journey-copy mx-auto max-w-2xl text-center">
-            <p className="font-display text-sm font-bold uppercase tracking-[0.22em] text-brand-700">The route</p>
-            <h2 id="journey-title" className="mt-3 font-display text-3xl font-bold tracking-tight text-brand-950 sm:text-5xl">
-              From kitchen heat to shelter tables.
+          <div className="lp-mosaic-copy mx-auto max-w-3xl text-center">
+            <h2 id="mosaic-title" className="font-display text-3xl font-bold tracking-tight text-stone-900 sm:text-5xl">
+              Great kitchens leave surplus. Great networks move it.
             </h2>
-            <p className="mt-4 text-stone-600 sm:text-lg">
-              Every listing carries a safe-until deadline. RescuePlate keeps the path short enough for the food to stay good.
+            <p className="mx-auto mt-4 max-w-xl text-stone-600 sm:text-lg">
+              RescuePlate connects donors, NGOs and volunteers in real time — so meals leave the counter while they are still safe to eat.
             </p>
           </div>
 
-          <div className="lp-strips mt-14 flex h-[22rem] gap-2 overflow-hidden sm:h-[28rem] sm:gap-3 md:h-[32rem]">
-            {STRIPS.map((s, i) => (
-              <figure
-                key={s.label}
-                className={`lp-strip relative flex-1 overflow-hidden rounded-2xl ${i % 2 === 0 ? 'mt-0 self-start' : 'mt-8 self-end sm:mt-12'}`}
-                style={{ maxWidth: i === 2 ? '22%' : undefined }}
-              >
-                <img src={s.src} alt="" className="lp-strip-img absolute inset-0 h-[120%] w-full object-cover" />
-                <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-950/80 to-transparent px-3 pb-3 pt-10 text-xs font-semibold text-white sm:text-sm">
-                  {s.label}
-                </figcaption>
-              </figure>
-            ))}
+          <div className="lp-mosaic mt-14 flex gap-3 overflow-x-auto pb-4 sm:gap-4 lg:overflow-visible lg:pb-0">
+            {/* Col 1 — impact + tag */}
+            <div className="lp-tile flex w-[11.5rem] shrink-0 flex-col gap-3 sm:w-[13rem]">
+              <div className="flex flex-1 flex-col justify-between rounded-[1.6rem] bg-brand-800 p-5 text-white sm:min-h-[17rem]">
+                <p className="font-display text-5xl font-extrabold tracking-tight sm:text-6xl">82</p>
+                <p className="mt-3 text-sm leading-snug text-brand-100">kg of household food waste per person each year in Bangladesh.</p>
+                <a href="#how" className="mt-5 inline-flex h-10 w-10 items-center justify-center rounded-full bg-lime-300 text-brand-950 transition hover:bg-lime-200" aria-label="How it works">
+                  <ArrowIcon />
+                </a>
+              </div>
+              <div className="inline-flex items-center gap-2 self-start rounded-2xl bg-stone-800 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wide text-white">
+                <span className="inline-block h-2 w-2 rounded-sm bg-amber-400" aria-hidden="true" />
+                Food, not waste
+              </div>
+            </div>
+
+            {/* Col 2 — tall photo */}
+            <figure className="lp-tile relative h-[20rem] w-[12.5rem] shrink-0 overflow-hidden rounded-[1.6rem] sm:h-[24rem] sm:w-[14.5rem]">
+              <img src={IMG.kitchen} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-4 pb-4 pt-16 text-sm font-semibold leading-snug text-white">
+                Kitchen surplus posted with a hard safe-until deadline
+              </figcaption>
+            </figure>
+
+            {/* Col 3 — join (offset down) */}
+            <div className="lp-tile flex w-[12rem] shrink-0 flex-col justify-end sm:w-[13.5rem] lg:mt-16">
+              <div className="rounded-[1.6rem] bg-stone-200/90 p-5">
+                <p className="font-display text-2xl font-bold leading-tight text-stone-900">Join kitchens &amp; NGOs already on the network</p>
+                <Link
+                  to="/register"
+                  className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800"
+                >
+                  Join RescuePlate
+                  <ArrowIcon className="text-lime-300" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Col 4 — tall photo */}
+            <figure className="lp-tile relative h-[20rem] w-[12.5rem] shrink-0 overflow-hidden rounded-[1.6rem] sm:h-[24rem] sm:w-[14.5rem]">
+              <img src={IMG.packing} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-4 pb-4 pt-16 text-sm font-semibold leading-snug text-white">
+                Volunteers collect and deliver before the clock runs out
+              </figcaption>
+            </figure>
+
+            {/* Col 5 — gallery lime + tag */}
+            <div className="lp-tile flex w-[12rem] shrink-0 flex-col gap-3 sm:w-[13.5rem]">
+              <div className="flex flex-1 flex-col rounded-[1.6rem] bg-lime-300 p-5 text-brand-950 sm:min-h-[17rem]">
+                <p className="font-display text-3xl font-extrabold tracking-tight">Impact</p>
+                <img src={IMG.meal} alt="" className="mt-4 h-28 w-full rounded-2xl object-cover" />
+                <Link to="/login" className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-bold">
+                  See the live demo
+                  <ArrowIcon />
+                </Link>
+              </div>
+              <div className="inline-flex items-center gap-2 self-start rounded-2xl bg-stone-800 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wide text-white">
+                <span className="inline-block h-2.5 w-2.5 rounded-sm bg-brand-500" aria-hidden="true" />
+                Kitchen to shelter
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -119,12 +119,27 @@
   mix-blend-mode: soft-light;
 }
 
-@media (max-width: 640px) {
-  .lp-strips {
-    gap: 0.35rem;
+.lp-mosaic {
+  scrollbar-width: thin;
+}
+
+.lp-mosaic::-webkit-scrollbar {
+  height: 6px;
+}
+
+.lp-tile {
+  transition: transform 0.25s ease;
+}
+
+@media (hover: hover) {
+  .lp-tile:hover {
+    transform: translateY(-4px);
   }
-  .lp-strip:nth-child(n + 4) {
-    display: none;
+}
+
+@media (min-width: 1024px) {
+  .lp-mosaic {
+    justify-content: center;
   }
 }
 
