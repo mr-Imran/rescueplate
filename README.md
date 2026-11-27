@@ -9,7 +9,7 @@
 | Advanced challenges | **A01** Real-Time Data Synchronization · **A05** Concurrency & Transaction Management |
 | GitHub repository | https://github.com/mr-Imran/rescueplate |
 | Live application | https://rescueplate.imrann.my.id |
-| YouTube presentation | _add URL_ |
+| YouTube presentation | https://www.youtube.com/watch?v=P4Ku38n3ecs |
 
 ## The problem
 
