@@ -135,18 +135,25 @@ export default function Landing() {
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       if (reduce) {
-        gsap.set(['.hero-brand', '.hero-line', '.hero-sub', '.hero-cta', '.hero-nav', '.hero-scene'], { clearProps: 'all', opacity: 1 });
+        gsap.set(
+          ['.hero-brand', '.hero-letter', '.hero-line', '.hero-sub', '.hero-cta', '.hero-nav', '.hero-scene', '.lp-step', '.lp-flow-item', '.lp-cta-block > *'],
+          { clearProps: 'all', opacity: 1 },
+        );
         return;
       }
 
       const intro = gsap.timeline({ defaults: { ease: 'power3.out' } });
       intro
-        .from('.hero-nav', { y: -24, opacity: 0, duration: 0.7 })
-        .from('.hero-brand', { y: 36, opacity: 0, duration: 0.9 }, '-=0.35')
-        .from('.hero-line', { y: 28, opacity: 0, duration: 0.75 }, '-=0.55')
-        .from('.hero-sub', { y: 20, opacity: 0, duration: 0.65 }, '-=0.45')
-        .from('.hero-cta a', { y: 16, opacity: 0, duration: 0.55, stagger: 0.1 }, '-=0.35')
-        .from('.hero-scene', { opacity: 0, scale: 1.04, duration: 1.1, ease: 'power2.out' }, 0.15);
+        .from('.hero-nav > *', { y: -20, opacity: 0, duration: 0.55, stagger: 0.08 })
+        .from('.hero-letter', { y: 48, opacity: 0, duration: 0.7, stagger: { each: 0.045, from: 'start' }, ease: 'power3.out' }, '-=0.25')
+        .from('.hero-line', { y: 28, opacity: 0, duration: 0.7 }, '-=0.35')
+        .from('.hero-sub', { y: 20, opacity: 0, duration: 0.6 }, '-=0.4')
+        .from('.hero-cta a', { y: 18, opacity: 0, duration: 0.5, stagger: 0.12 }, '-=0.3')
+        .from(
+          ['.hero-skyline', '.hero-kitchen', '.hero-route', '.hero-courier', '.hero-shelter', '.hero-plate', '.hero-steam'],
+          { opacity: 0, y: 24, duration: 0.7, stagger: 0.09, ease: 'power2.out' },
+          0.2,
+        );
 
       // Plate travels kitchen → shelter along the dashed route, then loops.
       gsap.fromTo(
@@ -198,46 +205,50 @@ export default function Landing() {
         ease: 'sine.inOut',
       });
 
-      // Scroll sections
-      gsap.utils.toArray('.lp-step').forEach((el, i) => {
-        gsap.from(el, {
-          y: 48,
-          opacity: 0,
-          duration: 0.8,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: el,
-            start: 'top 85%',
-            toggleActions: 'play none none reverse',
-          },
-          delay: i * 0.05,
-        });
+      // Scroll: section headers then staggered children
+      gsap.from('.lp-how-head > *', {
+        y: 36,
+        opacity: 0,
+        duration: 0.7,
+        stagger: 0.12,
+        ease: 'power3.out',
+        scrollTrigger: { trigger: '.lp-section', start: 'top 78%', toggleActions: 'play none none reverse' },
+      });
+
+      gsap.from('.lp-step', {
+        y: 56,
+        opacity: 0,
+        duration: 0.85,
+        stagger: { each: 0.16, from: 'start' },
+        ease: 'power3.out',
+        scrollTrigger: { trigger: '.lp-steps', start: 'top 82%', toggleActions: 'play none none reverse' },
+      });
+
+      gsap.from('.lp-flow-head > *', {
+        y: 32,
+        opacity: 0,
+        duration: 0.7,
+        stagger: 0.12,
+        ease: 'power3.out',
+        scrollTrigger: { trigger: '.lp-flow', start: 'top 78%', toggleActions: 'play none none reverse' },
       });
 
       gsap.from('.lp-flow-item', {
-        y: 40,
+        y: 44,
         opacity: 0,
         duration: 0.75,
-        stagger: 0.12,
+        stagger: { each: 0.14, from: 'start' },
         ease: 'power3.out',
-        scrollTrigger: {
-          trigger: '.lp-flow',
-          start: 'top 75%',
-          toggleActions: 'play none none reverse',
-        },
+        scrollTrigger: { trigger: '.lp-flow-grid', start: 'top 80%', toggleActions: 'play none none reverse' },
       });
 
       gsap.from('.lp-cta-block > *', {
-        y: 30,
+        y: 28,
         opacity: 0,
-        duration: 0.7,
-        stagger: 0.1,
+        duration: 0.65,
+        stagger: { each: 0.1, from: 'start' },
         ease: 'power3.out',
-        scrollTrigger: {
-          trigger: '.lp-cta-block',
-          start: 'top 80%',
-          toggleActions: 'play none none reverse',
-        },
+        scrollTrigger: { trigger: '.lp-cta-block', start: 'top 80%', toggleActions: 'play none none reverse' },
       });
     },
     { scope: root },
@@ -269,7 +280,13 @@ export default function Landing() {
         </nav>
 
         <div className="relative z-10 mx-auto flex min-h-[calc(100svh-5rem)] max-w-6xl flex-col justify-end px-5 pb-16 pt-10 sm:px-8 sm:pb-20 lg:justify-center lg:pb-24">
-          <p className="hero-brand font-display text-5xl font-extrabold tracking-tight text-white sm:text-7xl lg:text-8xl">RescuePlate</p>
+          <p className="hero-brand font-display text-5xl font-extrabold tracking-tight text-white sm:text-7xl lg:text-8xl" aria-label="RescuePlate">
+            {'RescuePlate'.split('').map((ch, i) => (
+              <span key={`${ch}${i}`} className="hero-letter inline-block">
+                {ch}
+              </span>
+            ))}
+          </p>
           <h1 className="hero-line mt-4 max-w-xl font-display text-2xl font-semibold leading-snug text-amber-200 sm:text-3xl lg:text-4xl">
             Surplus food, delivered before it expires.
           </h1>
@@ -295,11 +312,13 @@ export default function Landing() {
 
       {/* —— How it works —— */}
       <section className="lp-section mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28" aria-labelledby="how-title">
-        <p className="font-display text-sm font-bold uppercase tracking-[0.2em] text-brand-700">How it works</p>
-        <h2 id="how-title" className="mt-3 max-w-2xl font-display text-3xl font-bold tracking-tight text-brand-950 sm:text-4xl">
-          Three moves. No food left waiting on a WhatsApp thread.
-        </h2>
-        <ol className="mt-14 grid gap-12 md:grid-cols-3 md:gap-8">
+        <div className="lp-how-head">
+          <p className="font-display text-sm font-bold uppercase tracking-[0.2em] text-brand-700">How it works</p>
+          <h2 id="how-title" className="mt-3 max-w-2xl font-display text-3xl font-bold tracking-tight text-brand-950 sm:text-4xl">
+            Three moves. No food left waiting on a WhatsApp thread.
+          </h2>
+        </div>
+        <ol className="lp-steps mt-14 grid gap-12 md:grid-cols-3 md:gap-8">
           {STEPS.map((s) => (
             <li key={s.n} className="lp-step">
               <span className="font-display text-4xl font-extrabold text-amber-500/90">{s.n}</span>
@@ -313,11 +332,13 @@ export default function Landing() {
       {/* —— Live flow —— */}
       <section className="lp-flow border-y border-brand-900/10 bg-brand-900 text-brand-50" aria-labelledby="flow-title">
         <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
-          <p className="font-display text-sm font-bold uppercase tracking-[0.2em] text-amber-300">Built for the last few hours</p>
-          <h2 id="flow-title" className="mt-3 max-w-2xl font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Real-time claims. Hard food-safety clocks. No silent overwrites.
-          </h2>
-          <div className="mt-14 grid gap-10 sm:grid-cols-3">
+          <div className="lp-flow-head">
+            <p className="font-display text-sm font-bold uppercase tracking-[0.2em] text-amber-300">Built for the last few hours</p>
+            <h2 id="flow-title" className="mt-3 max-w-2xl font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Real-time claims. Hard food-safety clocks. No silent overwrites.
+            </h2>
+          </div>
+          <div className="lp-flow-grid mt-14 grid gap-10 sm:grid-cols-3">
             {[
               { title: 'Live feed', body: 'Listings appear and update the second a kitchen posts or an NGO claims.' },
               { title: 'Fair capacity', body: 'Each NGO’s daily meal limit keeps one shelter from taking everything.' },
