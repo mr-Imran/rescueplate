@@ -155,6 +155,56 @@ export async function runConflict() {
   return out;
 }
 
+/**
+ * A05 test: simulate a storage failure after meals were decremented but before
+ * commit. The whole transaction must roll back — remaining meals unchanged, no claim row.
+ */
+export async function runAtomicity() {
+  const donor = await findActor(seedId('user:donor'));
+  const ngo = await findActor(seedId('user:womens'));
+  const listing = await demoListing(donor, 'Mid-transaction failure', 30);
+  const sameKey = key();
+
+  await query(`CREATE OR REPLACE FUNCTION demo_fail_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+               BEGIN IF NEW.action = 'claim.created' THEN RAISE EXCEPTION 'demo simulated storage failure'; END IF; RETURN NEW; END $$`);
+  await query('DROP TRIGGER IF EXISTS demo_fail_audit ON audit_log');
+  await query('CREATE TRIGGER demo_fail_audit BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION demo_fail_audit()');
+
+  let failed;
+  try {
+    failed = await createClaim(ngo, listing.id, { meals: 10, allowPartial: true }, sameKey);
+  } catch (err) {
+    failed = { status: err.status || 500, body: { error: { code: err.code || 'INTERNAL_ERROR', message: err.message } }, replayed: false };
+  } finally {
+    await query('DROP TRIGGER IF EXISTS demo_fail_audit ON audit_log');
+    await query('DROP FUNCTION IF EXISTS demo_fail_audit()');
+  }
+
+  const afterFail = await listingLedger(listing.id);
+  const claimsAfterFail = (await query('SELECT count(*)::int AS n FROM claims WHERE listing_id = $1', [listing.id])).rows[0].n;
+  const keysAfterFail = (await query('SELECT count(*)::int AS n FROM idempotency_keys WHERE key = $1', [sameKey])).rows[0].n;
+
+  // Recovery: same Idempotency-Key now succeeds exactly once.
+  const retry = await createClaim(ngo, listing.id, { meals: 10, allowPartial: true }, sameKey);
+  const afterRetry = await listingLedger(listing.id);
+
+  if (retry.status === 201 && retry.body.claim?.id) {
+    await cleanup(donor, listing.id, [{ actor: ngo, claimId: retry.body.claim.id }]);
+  } else {
+    await cleanup(donor, listing.id, []);
+  }
+
+  const rolledBack = afterFail.remainingMeals === 30 && claimsAfterFail === 0 && keysAfterFail === 0 && !afterFail.oversold;
+  const recovered = retry.status === 201 && afterRetry.remainingMeals === 20 && Boolean(retry.body.claim?.id);
+  return {
+    listingId: listing.id,
+    failure: { status: failed.status, code: failed.body?.error?.code || null, replayed: Boolean(failed.replayed) },
+    afterFailure: { remainingMeals: afterFail.remainingMeals, claims: claimsAfterFail, idempotencyKeys: keysAfterFail, balanced: afterFail.balanced },
+    retry: { status: retry.status, claimId: retry.body.claim?.id ?? null, remainingMeals: afterRetry.remainingMeals },
+    passed: failed.status >= 500 && rolledBack && recovered,
+  };
+}
+
 /** Moves the application clock and immediately applies the time-based rules. */
 export async function advanceClock(actor, { minutes, reset }) {
   const seconds = await withTransaction(async (tx) => {

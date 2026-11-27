@@ -87,7 +87,12 @@ describe('applying live events', () => {
     expect(applyListing(items, { id: 'a', version: 2, remainingMeals: 40 })).toBe(items);
     expect(applyListing(items, { id: 'a', version: 3, remainingMeals: 99 })).toBe(items);
   });
-  it('ignores events for listings that are not on screen', () => {
+  it('ignores updates for listings that are not on screen', () => {
     expect(applyListing(items, { id: 'zzz', version: 9 })).toBe(items);
+  });
+  it('inserts a newly created listing at the front when asked', () => {
+    const next = applyListing(items, { id: 'zzz', version: 1, title: 'Fresh trays' }, { insert: true });
+    expect(next[0]).toEqual({ id: 'zzz', version: 1, title: 'Fresh trays' });
+    expect(next).toHaveLength(3);
   });
 });

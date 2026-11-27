@@ -69,16 +69,32 @@ export default function Feed({ mode }) {
   useEffect(() => () => clearTimeout(refetchTimer.current), []);
 
   useLive('listing.upsert', ({ listing, created }) => {
-    // 1. Patch the card (and an open claim dialog) in place immediately; the higher version wins.
-    setData((d) => (d ? { ...d, items: applyListing(d.items, listing) } : d));
+    // 1. Patch or insert the card immediately; the higher version wins.
+    //    New posts must be inserted — applyListing used to ignore unknown ids, so
+    //    an open feed never showed a just-posted listing until the delayed refetch.
+    const mineOwn = mine && listing.donorOrgId === user.org?.id;
+    const shouldInsert = (!mine && created) || mineOwn;
+    setData((d) => {
+      if (!d) return d;
+      const had = d.items.some((i) => i.id === listing.id);
+      const items = applyListing(d.items, listing, { insert: shouldInsert });
+      if (items === d.items) return d;
+      return {
+        ...d,
+        items,
+        total: !had ? d.total + 1 : d.total,
+        summary: !had ? { ...d.summary, mealsAvailable: d.summary.mealsAvailable + (listing.remainingMeals || 0) } : d.summary,
+      };
+    });
     setClaiming((c) => (c && c.id === listing.id && listing.version > c.version ? { ...listing, distanceKm: c.distanceKm } : c));
-    if (data?.items.some((i) => i.id === listing.id && listing.version > i.version)) {
+    if (created || mineOwn) {
+      setFlash((f) => ({ ...f, [listing.id]: Date.now() }));
+      setAnnounce(created ? `New listing from ${listing.donor.name}: ${listing.title}.` : `${listing.title}: ${listing.remainingMeals} meals left.`);
+    } else if (data?.items.some((i) => i.id === listing.id && listing.version > i.version)) {
       setFlash((f) => ({ ...f, [listing.id]: Date.now() }));
       setAnnounce(`${listing.title}: ${listing.remainingMeals} meals left.`);
-    } else if (created) {
-      setAnnounce(`New listing from ${listing.donor.name}: ${listing.title}.`);
     }
-    // 2. Then refresh ordering, totals and newly matching listings from the server.
+    // 2. Then refresh ordering, totals and filter matches from the server.
     refetchSoon();
   });
   useLive('listing.removed', ({ id }) => {

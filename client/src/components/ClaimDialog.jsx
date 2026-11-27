@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, newIdempotencyKey } from '../lib/api.js';
+import { assessRouteSafety } from '../lib/geo.js';
 import { meals as mealsText } from '../lib/format.js';
+import { useAuth } from '../state/auth.jsx';
 import { isClaimable } from './ListingCard.jsx';
 import { Alert, Button, Countdown, Field, Modal, useNow } from './ui.jsx';
 
@@ -10,7 +12,9 @@ import { Alert, Button, Countdown, Field, Modal, useNow } from './ui.jsx';
  * figure keeps updating while the dialog is open.
  */
 export function ClaimDialog({ listing, onClose, onClaimed }) {
+  const { user } = useAuth();
   const now = useNow(1000);
+  const route = assessRouteSafety(listing.donor, user.org, listing.safeUntil, now);
   const [meals, setMeals] = useState('');
   const [allowPartial, setAllowPartial] = useState(true);
   const [capacity, setCapacity] = useState(null);
@@ -95,12 +99,22 @@ export function ClaimDialog({ listing, onClose, onClaimed }) {
             <p className="mt-1 text-stone-700" aria-live="polite">
               <span className="tabular font-bold">{listing.remainingMeals}</span> meals left · safe for <Countdown until={listing.safeUntil} />
             </p>
+            {route && (
+              <p className="mt-1 text-stone-700">
+                Route to kitchen: about <span className="tabular font-bold">{route.distanceKm} km</span> · ~<span className="tabular font-bold">{route.travelMinutes} min</span> including pickup
+              </p>
+            )}
             {capacity && (
               <p className="mt-1 text-stone-700">
                 Your capacity left today: <span className="tabular font-bold">{capacity.left}</span> of {capacity.daily} meals
               </p>
             )}
           </div>
+          {route && !route.ok && (
+            <Alert tone="warning" title="Would expire on the road">
+              RescuePlate blocks this claim: a volunteer leaving now could not deliver before the safe-until deadline. We would rather lose the meal than move unsafe food.
+            </Alert>
+          )}
           {!claimable && <Alert tone="warning">This food can no longer be claimed. It was fully claimed, withdrawn or has passed its safe-until time.</Alert>}
           {error && (
             <Alert tone="error" title={error.transient ? 'Could not reach the server' : 'Claim not made'}>
@@ -139,8 +153,8 @@ export function ClaimDialog({ listing, onClose, onClaimed }) {
             <Button variant="secondary" onClick={onClose} disabled={busy}>
               Cancel
             </Button>
-            <Button type="submit" busy={busy} disabled={!claimable}>
-              {error?.transient ? 'Try again' : 'Claim meals'}
+            <Button type="submit" busy={busy} disabled={!claimable || (route && !route.ok)}>
+              {error?.transient ? 'Try again' : route && !route.ok ? 'Route unsafe' : 'Claim meals'}
             </Button>
           </div>
         </form>

@@ -15,7 +15,7 @@ Submission item S01: *the problem, the main workflow, the two selected advanced 
 | A01 (20 marks): same four parts | 2:30 conflict, merge, reconnect, limitation line |
 | Edge cases (M06) | Bad input at 0:30, duplicate request at 1:15, expired food at 3:45 |
 | M03 auth, M05 search/filter/sort, M07 responsive and keyboard | 4:20 mandatory-requirements sweep |
-| M02 persistence, M04 rules | 0:30 and 3:45 (clock rules) |
+| M02 persistence, M04 rules (incl. unique R9 route gate) | 0:30 claim route check, 3:45 clock rules |
 | M08 deployment and docs | Live URL on screen, README on screen at the close |
 
 Lines in **bold quotes** are spoken. Lines in *[brackets]* are what is on screen. Pace is about 140 words per minute, so don't rush. The demo is the proof and the talking is only the frame.
@@ -63,9 +63,9 @@ Lines in **bold quotes** are spoken. Lines in *[brackets]* are what is on screen
 
 > **"Watch the other window. I didn't refresh. The listing is already in the feed of every NGO, because every change is pushed over WebSockets."**
 
-*[Window B: Shirin (Alor Thikana Shelter) → Claim → ask for 25 meals.]*
+*[Window B: Shirin (Alor Thikana Shelter) → Claim → ask for 25 meals. Pause on the route line (km + minutes).]*
 
-> **"Shirin's shelter claims twenty-five. Claims are capped by each NGO's daily capacity, so one organization can't hoard everything. The other fifteen meals are still open for the next NGO."**
+> **"Before she claims, RescuePlate checks the route. Distance and a Dhaka travel model tell us whether a volunteer leaving now can deliver before the food expires. If it would expire on the road, the claim button stays locked — WhatsApp food banks can't do that. Nearby kitchens with time left: claim goes through. Shirin takes twenty-five. Capacity caps stop one NGO from hoarding. Fifteen meals stay open for the next shelter."**
 
 *[Volunteer tab: Sabbir → accept pickup → enter the donor's 6-digit handover code → deliver.]*
 
@@ -93,13 +93,13 @@ Lines in **bold quotes** are spoken. Lines in *[brackets]* are what is on screen
 
 *[Result: Passed, one claim created, five replays.]*
 
+*[Click "Failure mid-claim, full rollback".]*
+
+> **"And if storage fails halfway through a claim — after meals were decremented — the whole transaction rolls back. Remaining meals unchanged, no claim row, no stored key. The same key then succeeds once. Atomicity isn't a slide; it's a button."**
+
 *[Optional, 10 seconds: terminal, `npm run race -- https://rescueplate.imrann.my.id`.]*
 
-> **"And the same test runs as a black-box script against the live URL. Anyone can try to break it."**
-
-*[Optional, 10 seconds: terminal showing the concurrency tests passing, including the one that kills a transaction halfway.]*
-
-> **"There's also a test that simulates a failure in the middle of a claim and proves everything rolls back, so no meal is lost. The limit, honestly: claims on one very popular listing are processed one at a time. That's fine at this scale, and the next step would be a queue or split stock."**
+> **"And the same test runs as a black-box script against the live URL. Anyone can try to break it. The limit, honestly: claims on one very popular listing are processed one at a time. That's fine at this scale, and the next step would be a queue or split stock."**
 
 ---
 

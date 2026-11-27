@@ -39,10 +39,12 @@ async function dispatch(io, event) {
       break;
     }
     case 'claim': {
-      // Claims are private. Only the parties involved get a hint; they then fetch
-      // the details over the authorized REST API, so sockets never leak claim data.
-      const rooms = [`org:${event.ngoOrgId}`, `org:${event.donorOrgId}`, 'role:admin', 'role:volunteer', ...(event.volunteerIds || []).map((id) => `user:${id}`)];
-      io.to(rooms).emit('claim.changed', { claimId: event.id, listingId: event.listingId });
+      // Claims are private: parties fetch details over authorized REST.
+      // Volunteers on the pickup board get a board ping only (no claim payload),
+      // not every claim lifecycle event for every NGO.
+      const parties = [`org:${event.ngoOrgId}`, `org:${event.donorOrgId}`, 'role:admin', ...(event.volunteerIds || []).map((id) => `user:${id}`)];
+      io.to(parties).emit('claim.changed', { claimId: event.id, listingId: event.listingId });
+      if (event.board) io.to('role:volunteer').emit('pickup.board', { claimId: event.id, listingId: event.listingId });
       break;
     }
     case 'org':

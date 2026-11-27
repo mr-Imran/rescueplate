@@ -271,14 +271,17 @@ describe('realtime access control', () => {
 
   it('claim events reach only the parties involved and carry no private data', async () => {
     const listing = await postListing(donor);
-    const [ours, theirs, donorSide] = [live(ngo), live(await s.as('ngo2')), live(donor2)];
-    await Promise.all([ours.ready, theirs.ready, donorSide.ready]);
+    const [ours, theirs, donorSide, volunteer] = [live(ngo), live(await s.as('ngo2')), live(donor2), live(await s.as('volunteer'))];
+    await Promise.all([ours.ready, theirs.ready, donorSide.ready, volunteer.ready]);
     const created = await claim(ngo, listing.id, 10);
     const hint = await ours.waitFor((e) => e.name === 'claim.changed');
     await donorSide.waitFor((e) => e.name === 'claim.changed');
     expect(hint.payload).toEqual({ claimId: created.body.claim.id, listingId: listing.id }); // ids only
     await theirs.waitFor(upsertOf(listing.id, 2)); // the other NGO sees the public meal count change...
     expect(theirs.events.some((e) => e.name === 'claim.changed')).toBe(false); // ...but nothing about the claim
+    const board = await volunteer.waitFor((e) => e.name === 'pickup.board');
+    expect(board.payload).toEqual({ claimId: created.body.claim.id, listingId: listing.id });
+    expect(theirs.events.some((e) => e.name === 'pickup.board')).toBe(false);
   });
 
   it('suspending a user disconnects their live session at once', async () => {

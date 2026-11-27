@@ -226,6 +226,9 @@ export function buildRoutes() {
   admin.post('/demo/conflict', demoOnly, async (_req, res) => {
     res.json(await demo.runConflict());
   });
+  admin.post('/demo/atomicity', demoOnly, async (_req, res) => {
+    res.json(await demo.runAtomicity());
+  });
   admin.post('/demo/clock', demoOnly, async (req, res) => {
     res.json(await demo.advanceClock(req.user, parse(schemas.demoClock, req.body)));
   });

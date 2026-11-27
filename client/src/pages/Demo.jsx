@@ -21,6 +21,7 @@ export default function Demo() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Race />
         <Idempotency />
+        <Atomicity />
         <Conflict />
         <Connection />
         <Clock />
@@ -173,6 +174,30 @@ function Idempotency() {
             head={['Request', 'HTTP', 'Handling', 'Claim id']}
             rows={result.responses.map((r) => [`#${r.request}${r.late ? ' (late retry)' : ''}`, r.status, r.replayed ? 'Replayed stored response' : 'Executed', r.claimId?.slice(0, 8)])}
           />
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function Atomicity() {
+  const { busy, result, run } = useRun();
+  return (
+    <Card
+      tag="A05 · Atomicity"
+      title="Failure mid-claim, full rollback"
+      proves="Meals are decremented, then the audit write is forced to fail. The transaction must roll back: remaining meals unchanged, no claim row, no idempotency key. The same key then succeeds once."
+    >
+      <Button busy={busy} onClick={() => run(() => api.post('/admin/demo/atomicity'))}>
+        Simulate mid-transaction failure
+      </Button>
+      {result && (
+        <div className="space-y-3" aria-live="polite">
+          <Verdict passed={result.passed}>
+            Failure returned HTTP {result.failure.status}. After rollback: <strong>{result.afterFailure.remainingMeals}</strong> meals left,{' '}
+            <strong>{result.afterFailure.claims}</strong> claims, <strong>{result.afterFailure.idempotencyKeys}</strong> stored keys. Retry then left{' '}
+            <strong>{result.retry.remainingMeals}</strong> meals (exactly 10 claimed once).
+          </Verdict>
         </div>
       )}
     </Card>

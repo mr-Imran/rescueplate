@@ -22,6 +22,8 @@ export default function Pickups() {
     board.reload({ silent: true });
   };
   useLive('claim.changed', refresh);
+  useLive('pickup.board', refresh);
+  useLive('listing.upsert', refresh);
   useLive('resync', refresh);
 
   const run = async (key, fn, success) => {

@@ -224,13 +224,19 @@ describe('atomicity: a failure part-way through leaves nothing behind', () => {
     expect(res.status).toBe(404);
   });
 
-  it('the demo console race, duplicate and conflict scenarios all pass', async () => {
+  it('the demo console race, duplicate, atomicity and conflict scenarios all pass', async () => {
     const admin = await s.as('admin');
     const race = (await admin.post('/admin/demo/race', { meals: 40, contenders: 6, requestEach: 15 })).body;
     expect(race).toMatchObject({ passed: true, totalGranted: 40 });
     expect(race.ledger).toMatchObject({ oversold: false, balanced: true, remainingMeals: 0 });
     const idem = (await admin.post('/admin/demo/idempotency', { copies: 5 })).body;
     expect(idem).toMatchObject({ passed: true, claimsCreated: 1, executedOnce: true, sameClaimReturned: true });
+    const atomic = (await admin.post('/admin/demo/atomicity')).body;
+    expect(atomic).toMatchObject({
+      passed: true,
+      afterFailure: { remainingMeals: 30, claims: 0, idempotencyKeys: 0 },
+      retry: { status: 201, remainingMeals: 20 },
+    });
     const conflict = (await admin.post('/admin/demo/conflict')).body;
     expect(conflict.passed).toBe(true);
     expect(conflict.results.map((r) => r.outcome).sort()).toEqual(['SAVED', 'VERSION_CONFLICT']);

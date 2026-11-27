@@ -119,13 +119,14 @@ export function useLive(name, handler) {
 /**
  * Applies a live listing snapshot to a list. The copy with the higher version
  * wins, so duplicated or out-of-order events can never roll the UI backwards.
+ * Pass `insert: true` for newly created listings so the feed shows them immediately
+ * (instead of waiting for a full refetch).
  */
-export function applyListing(items, incoming) {
-  let changed = false;
-  const next = items.map((item) => {
-    if (item.id !== incoming.id || incoming.version <= item.version) return item;
-    changed = true;
-    return { ...incoming, distanceKm: item.distanceKm };
-  });
-  return changed ? next : items;
+export function applyListing(items, incoming, { insert = false } = {}) {
+  const idx = items.findIndex((item) => item.id === incoming.id);
+  if (idx === -1) return insert ? [incoming, ...items] : items;
+  if (incoming.version <= items[idx].version) return items;
+  const next = items.slice();
+  next[idx] = { ...incoming, distanceKm: items[idx].distanceKm };
+  return next;
 }

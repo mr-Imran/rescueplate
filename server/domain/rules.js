@@ -19,6 +19,10 @@ export const LIMITS = {
   MAX_ACTIVE_PICKUPS: 2, //       pickups one volunteer may carry at a time
   MAX_MEALS: 5000,
   CLOCK_SKEW_MINUTES: 5, //       tolerance for "prepared at" slightly in the future
+  // R9 — Dhaka urban travel model: refuse claims that would expire on the road.
+  TRAVEL_KM_PER_HOUR: 18, //      congested city average (CNG / rickshaw / van)
+  TRAVEL_HANDOFF_MINUTES: 12, //  find the kitchen, load, leave
+  TRAVEL_ARRIVE_BUFFER_MINUTES: 5, // must still have this much safe time left at ETA
 };
 
 const MINUTE = 60_000;
@@ -26,6 +30,50 @@ const HOUR = 60 * MINUTE;
 const ok = (extra = {}) => ({ ok: true, ...extra });
 const reject = (status, code, message, details) => ({ ok: false, status, code, message, ...(details ? { details } : {}) });
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/** Great-circle distance in km, or null when coordinates are missing. */
+export function haversineKm(a, b) {
+  if (![a?.lat, a?.lng, b?.lat, b?.lng].every((n) => Number.isFinite(Number(n)))) return null;
+  const toRad = (d) => (Number(d) * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Minutes to collect and start moving, including handoff at the kitchen. */
+export function estimateTravelMinutes(distanceKm) {
+  if (distanceKm == null || !Number.isFinite(distanceKm)) return null;
+  return Math.ceil((Math.max(0, distanceKm) / LIMITS.TRAVEL_KM_PER_HOUR) * 60) + LIMITS.TRAVEL_HANDOFF_MINUTES;
+}
+
+/**
+ * R9 — unique RescuePlate rule vs phone/WhatsApp food banks and consumer surplus apps:
+ * if a volunteer leaving now cannot reach the kitchen before the food expires (plus a
+ * small buffer), the claim is refused. We would rather lose the meal than move unsafe food.
+ */
+export function assessRouteSafety({ donor, ngo, safeUntil, now }) {
+  const distanceKm = haversineKm(donor, ngo);
+  const travelMinutes = estimateTravelMinutes(distanceKm);
+  if (travelMinutes == null) return { ok: true, distanceKm: null, travelMinutes: null };
+  const eta = new Date(now).getTime() + travelMinutes * MINUTE;
+  const deadline = new Date(safeUntil).getTime();
+  const arrivesWith = deadline - eta;
+  const needed = LIMITS.TRAVEL_ARRIVE_BUFFER_MINUTES * MINUTE;
+  const roundedKm = Math.round(distanceKm * 10) / 10;
+  if (arrivesWith < needed) {
+    return {
+      ok: false,
+      distanceKm: roundedKm,
+      travelMinutes,
+      code: 'UNSAFE_ROUTE',
+      message: `This kitchen is about ${roundedKm} km away (~${travelMinutes} min including pickup). The food would expire on the road before it could be delivered safely.`,
+    };
+  }
+  return { ok: true, distanceKm: roundedKm, travelMinutes };
+}
 
 /**
  * R1 - food-safety window. Returns a map of field -> message (empty when valid).
@@ -71,7 +119,7 @@ export function deriveListingStatus({ cancelled, totalMeals, remainingMeals, ope
  * R2, R3, R4, R8 - decides a claim request. Called with the listing and the
  * NGO rows locked, so the answer cannot be invalidated by a concurrent claim.
  */
-export function decideClaim({ listing, org, now, requested, allowPartial, capacityUsed, hasOpenClaim }) {
+export function decideClaim({ listing, org, now, requested, allowPartial, capacityUsed, hasOpenClaim, donorCoords, ngoCoords }) {
   if (!org || org.type !== 'ngo') {
     return reject(403, 'FORBIDDEN', 'Only NGO accounts can claim food.');
   }
@@ -90,6 +138,15 @@ export function decideClaim({ listing, org, now, requested, allowPartial, capaci
   if (listing.remainingMeals <= 0) {
     return reject(409, 'SOLD_OUT', 'All meals on this listing have already been claimed.');
   }
+
+  // R9 before capacity/stock: unsafe routes never consume NGO capacity or meals.
+  const donor = donorCoords || listing.donor || { lat: listing.donorLat, lng: listing.donorLng };
+  const ngoPoint = ngoCoords || { lat: org.lat, lng: org.lng };
+  const route = assessRouteSafety({ donor, ngo: ngoPoint, safeUntil: listing.safeUntil, now });
+  if (!route.ok) {
+    return reject(409, route.code, route.message, { distanceKm: route.distanceKm, travelMinutes: route.travelMinutes, safeUntil: listing.safeUntil });
+  }
+
   const capacityLeft = Math.max(0, org.dailyCapacityMeals - capacityUsed);
   if (capacityLeft <= 0) {
     return reject(
@@ -120,7 +177,14 @@ export function decideClaim({ listing, org, now, requested, allowPartial, capaci
         ? `Granted ${granted} of ${requested} requested: your organization had capacity for ${plural(capacityLeft, 'more meal')} in this ${LIMITS.CAPACITY_WINDOW_HOURS}-hour window.`
         : `Granted all ${plural(granted, 'meal')} requested.`;
 
-  return ok({ granted, partial: granted < requested, limitedBy, explanation, capacityLeftAfter: capacityLeft - granted });
+  return ok({
+    granted,
+    partial: granted < requested,
+    limitedBy,
+    explanation,
+    capacityLeftAfter: capacityLeft - granted,
+    route: route.travelMinutes != null ? { distanceKm: route.distanceKm, travelMinutes: route.travelMinutes } : null,
+  });
 }
 
 /** Rules for a donor editing a listing. `claimedMeals` = total - remaining. */

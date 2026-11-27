@@ -68,7 +68,7 @@ async function getClaimView(db, id, viewer) {
 }
 
 /** Queues the realtime event for a claim, addressed only to the parties involved. */
-function notifyClaim(tx, claim, listing, volunteerIds = []) {
+function notifyClaim(tx, claim, listing, volunteerIds = [], { board = false } = {}) {
   tx.notify({
     t: 'claim',
     id: claim.id,
@@ -76,6 +76,7 @@ function notifyClaim(tx, claim, listing, volunteerIds = []) {
     ngoOrgId: claim.ngoOrgId,
     donorOrgId: listing.donorOrgId,
     volunteerIds: volunteerIds.filter(Boolean),
+    board,
   });
 }
 
@@ -115,9 +116,9 @@ export async function createClaim(actor, listingId, { meals, allowPartial }, ide
     const listing = await lockListing(tx, listingId);
     if (!listing) return rejected({ status: 404, code: 'NOT_FOUND', message: 'Listing was not found.' });
 
-    const orgRes = await tx.query('SELECT id, type, status, daily_capacity_meals FROM organizations WHERE id = $1 FOR UPDATE', [actor.orgId]);
+    const orgRes = await tx.query('SELECT id, type, status, daily_capacity_meals, lat, lng FROM organizations WHERE id = $1 FOR UPDATE', [actor.orgId]);
     const o = orgRes.rows[0];
-    const org = o ? { id: o.id, type: o.type, status: o.status, dailyCapacityMeals: o.daily_capacity_meals } : null;
+    const org = o ? { id: o.id, type: o.type, status: o.status, dailyCapacityMeals: o.daily_capacity_meals, lat: o.lat, lng: o.lng } : null;
 
     // Read the clock AFTER acquiring the locks: if we waited behind another claim, time has moved on.
     const now = await appNow(tx);
@@ -136,6 +137,8 @@ export async function createClaim(actor, listingId, { meals, allowPartial }, ide
       allowPartial,
       capacityUsed: used.rows[0].used,
       hasOpenClaim: open.rowCount > 0,
+      donorCoords: listing.donor,
+      ngoCoords: org ? { lat: org.lat, lng: org.lng } : null,
     });
     if (!decision.ok) return rejected(decision);
 
@@ -152,7 +155,7 @@ export async function createClaim(actor, listingId, { meals, allowPartial }, ide
       after: { listingId, meals: decision.granted, status: 'CLAIMED' },
       meta: { requested: meals, granted: decision.granted, limitedBy: decision.limitedBy, remainingAfter: updated.remainingMeals },
     });
-    notifyClaim(tx, { id: claimId, ngoOrgId: actor.orgId }, listing);
+    notifyClaim(tx, { id: claimId, ngoOrgId: actor.orgId }, listing, [], { board: true });
 
     return finish(201, {
       claim: await getClaimView(tx, claimId, actor),
@@ -164,6 +167,7 @@ export async function createClaim(actor, listingId, { meals, allowPartial }, ide
         limitedBy: decision.limitedBy,
         explanation: decision.explanation,
         capacityLeft: decision.capacityLeftAfter,
+        route: decision.route,
       },
     });
   });
@@ -237,7 +241,7 @@ export async function assignVolunteer(actor, claimId, volunteerId) {
       before: { status: claim.status },
       after: { status: 'VOLUNTEER_ASSIGNED', volunteer: vol.rows[0].name },
     });
-    notifyClaim(tx, claim, listing, [volunteerId]);
+    notifyClaim(tx, claim, listing, [volunteerId], { board: true });
     return getClaimView(tx, claimId, actor);
   });
 }
@@ -254,7 +258,7 @@ export async function unassignVolunteer(actor, claimId) {
     await tx.query(`UPDATE pickups SET status = 'ABANDONED', closed_at = $2 WHERE id = $1`, [pickup.id, now]);
     await setClaimStatus(tx, claim, 'CLAIMED', now, { awaiting: now }); // the 30-minute release timer restarts
     await audit(tx, actor, 'pickup.unassigned', 'claim', claimId, { before: { status: claim.status }, after: { status: 'CLAIMED' } });
-    notifyClaim(tx, claim, listing, [pickup.volunteerId]);
+    notifyClaim(tx, claim, listing, [pickup.volunteerId], { board: true });
     return getClaimView(tx, claimId, actor);
   });
 }
@@ -306,7 +310,7 @@ async function closeAndReturn(tx, actor, { listing, claim, pickup, now }, to, ac
     after: { status: to },
     meta: { mealsReturned: claim.meals, listingStatus: updated.status, remainingAfter: updated.remainingMeals },
   });
-  notifyClaim(tx, claim, listing, [pickup?.volunteerId]);
+  notifyClaim(tx, claim, listing, [pickup?.volunteerId], { board: true });
 }
 
 export async function cancelClaim(actor, claimId) {

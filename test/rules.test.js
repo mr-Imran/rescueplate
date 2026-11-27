@@ -1,6 +1,7 @@
 // Unit tests for the pure business rules and state machines (no database needed).
 import { describe, expect, it } from 'vitest';
 import {
+  assessRouteSafety,
   checkListingTimes,
   decideAssign,
   decideCancelListing,
@@ -9,6 +10,8 @@ import {
   decideListingEdit,
   decidePickup,
   deriveListingStatus,
+  estimateTravelMinutes,
+  haversineKm,
   shouldRelease,
 } from '../server/domain/rules.js';
 import { assertTransition, canTransition, CLAIM_TRANSITIONS, LISTING_TRANSITIONS } from '../server/domain/stateMachine.js';
@@ -47,7 +50,7 @@ describe('listing status derivation', () => {
   it('CANCELLED wins over everything', () => expect(d({ cancelled: true, remainingMeals: 0 })).toBe('CANCELLED'));
 });
 
-describe('claim decision (R2, R3, R4, R8)', () => {
+describe('claim decision (R2, R3, R4, R8, R9)', () => {
   it('grants the full request when stock and capacity allow', () => {
     expect(decideClaim(claimReq())).toMatchObject({ ok: true, granted: 20, partial: false, limitedBy: null });
   });
@@ -79,6 +82,31 @@ describe('claim decision (R2, R3, R4, R8)', () => {
     expect(decideClaim(claimReq({ listing: listing({ status: 'POSTED', safeUntil: mins(-1) }) })).code).toBe('LISTING_EXPIRED');
     expect(decideClaim(claimReq({ listing: listing({ safeUntil: NOW }) })).code).toBe('LISTING_EXPIRED');
   });
+  it('R9: refuses a claim that would expire on the road', () => {
+    // ~15 km apart in Dhaka → ~62 min travel+handoff; food only safe 40 more minutes.
+    const r = decideClaim(
+      claimReq({
+        listing: listing({ safeUntil: mins(40), donor: { lat: 23.78, lng: 90.41 } }),
+        org: ngo({ lat: 23.7, lng: 90.35 }),
+        donorCoords: { lat: 23.78, lng: 90.41 },
+        ngoCoords: { lat: 23.7, lng: 90.35 },
+      }),
+    );
+    expect(r).toMatchObject({ ok: false, code: 'UNSAFE_ROUTE' });
+    expect(r.message).toMatch(/expire on the road/i);
+  });
+  it('R9: allows a nearby kitchen while food still has time', () => {
+    const r = decideClaim(
+      claimReq({
+        listing: listing({ safeUntil: mins(120), donor: { lat: 23.746, lng: 90.374 } }),
+        org: ngo({ lat: 23.754, lng: 90.369 }),
+        donorCoords: { lat: 23.746, lng: 90.374 },
+        ngoCoords: { lat: 23.754, lng: 90.369 },
+      }),
+    );
+    expect(r).toMatchObject({ ok: true, granted: 20 });
+    expect(r.route.travelMinutes).toBeGreaterThan(0);
+  });
   it('R8: rejects unverified and suspended organizations', () => {
     expect(decideClaim(claimReq({ org: ngo({ status: 'PENDING' }) }))).toMatchObject({ ok: false, status: 403, code: 'ORG_NOT_VERIFIED' });
     expect(decideClaim(claimReq({ org: ngo({ status: 'SUSPENDED' }) })).code).toBe('ORG_NOT_VERIFIED');
@@ -88,6 +116,24 @@ describe('claim decision (R2, R3, R4, R8)', () => {
   });
   it('rejects non-NGO organizations', () => {
     expect(decideClaim(claimReq({ org: ngo({ type: 'donor' }) })).status).toBe(403);
+  });
+});
+
+describe('R9 route safety helpers', () => {
+  it('computes distance and travel minutes', () => {
+    const km = haversineKm({ lat: 23.746, lng: 90.374 }, { lat: 23.78, lng: 90.41 });
+    expect(km).toBeGreaterThan(3);
+    expect(estimateTravelMinutes(km)).toBeGreaterThan(12);
+  });
+  it('flags an impossible ETA', () => {
+    const r = assessRouteSafety({
+      donor: { lat: 23.7, lng: 90.3 },
+      ngo: { lat: 23.9, lng: 90.5 },
+      safeUntil: mins(20),
+      now: NOW,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.code).toBe('UNSAFE_ROUTE');
   });
 });
 

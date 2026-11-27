@@ -10,7 +10,7 @@ export default function ListingNew() {
   const { config, user } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
-  const [values, setValues] = useState(emptyListingValues);
+  const [values, setValues] = useState(() => emptyListingValues());
   const [errors, setErrors] = useState({});
   const [failure, setFailure] = useState(null);
   const [busy, setBusy] = useState(false);

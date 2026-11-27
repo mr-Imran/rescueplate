@@ -29,7 +29,7 @@ The demo data is set in Dhaka: fictional organizations such as Shapla Kitchen (D
 4. Time rules run by themselves: a claim with no volunteer after 30 minutes is released back to the feed, and food past its deadline can no longer be claimed or collected.
 5. An **impact dashboard** shows meals rescued, food and emissions saved, rescue rate and top contributors.
 
-Unlike consumer discount apps, RescuePlate is donor-to-NGO and enforces food-safety time limits.
+Unlike consumer discount apps and Bangladesh WhatsApp/phone food banks, RescuePlate is **donor→NGO→volunteer with executable rules**: capacity caps, race-safe claims, live sync, and a unique **R9 travel-safety gate** that refuses a claim when the food would expire on the road before a volunteer could deliver it.
 
 ## Try it
 
@@ -45,7 +45,7 @@ Sign-in page → **Try it as…** gives one-click demo accounts for every role (
 Open two browser windows (one normal, one private) with different personas to see live updates.
 
 **Demo console (`/demo`, admin):** one button per judging scenario, each run against the real code paths and database:
-race for the last meals · the same request sent six times · two simultaneous edits · drop the live connection · fast-forward the clock · ledger check · reset demo data.
+race for the last meals · the same request sent six times · mid-transaction failure (full rollback) · two simultaneous edits · drop the live connection · fast-forward the clock · ledger check · reset demo data.
 
 **The demo looks after itself.** Cooked food is only safe for a few hours, so seeded listings would all expire within a day and the feed would sit empty. Once nobody has changed anything for 2 hours, the sample data is restored: fresh listings, claims at every stage, clock back to real time, every persona usable. It never happens while someone is working, sign-ins survive it, and accounts that visitors registered are kept (`server/db/seed.js → resetDemoIfIdle`, `test/demo.test.js`).
 
@@ -130,7 +130,7 @@ Sweeper (time rules) ───────────────────�
 | M01 | Complete functional system | Listings → Claims → Pickups → Impact (`server/services`, `client/src/pages`) | Run the workflow with three personas; `test/workflow.test.js` |
 | M02 | Database & persistence | PostgreSQL, `001_init.sql`, CRUD in `services/listings.js`, `accounts.js` | Create/edit/delete a listing, restart the server; `test/listings.test.js` |
 | M03 | Authentication & authorization | `server/auth/*`: bcrypt, server-side sessions (hashed tokens) in an httpOnly SameSite cookie, role guards, ownership checks in every service | Try another kitchen's listing id → 403; `test/auth.test.js` |
-| M04 | Complex business logic | Rules R1–R8 and state machines in `server/domain`; time rules in `jobs/sweeper.js` | Demo console → fast-forward clock; `test/rules.test.js`, `test/workflow.test.js` |
+| M04 | Complex business logic | Rules R1–R9 and state machines in `server/domain`; time rules in `jobs/sweeper.js`; R9 travel-safety gate | Demo console → fast-forward clock; claim a far kitchen with a short safe window; `test/rules.test.js`, `test/workflow.test.js` |
 | M05 | Dynamic data processing | `listListings` (search, 7 filters, 6 sorts, paging, aggregates, distance), `services/stats.js` | Live feed filters, Impact page; `test/listings.test.js` checks totals against raw rows |
 | M06 | Errors & edge cases | zod validation, duplicate-post lock, `lib/errors.js`, client retry and reload states | Post with 0 meals / past time; double-submit; `test/listings.test.js` |
 | M07 | Responsive & accessible | Mobile-first Tailwind; labels, `aria-live`, native `<dialog>`, visible focus, skip link, tab strips with arrow-key navigation (WAI-ARIA tabs pattern), table view for the chart | Use on a phone; tab through with the keyboard |
@@ -148,7 +148,21 @@ Sweeper (time rules) ───────────────────�
 | R6 | Food cannot be collected after its safe-until time; collection needs the donor's handover code |
 | R7 | A donor cannot cancel a listing with open claims, or delete one that has claim history |
 | R8 | Only verified organizations can post or claim |
+| R9 | **Travel-safety (unique):** refuse a claim when haversine distance + Dhaka travel model (18 km/h + handoff) means the food would expire on the road before delivery; prefer losing the meal to moving unsafe food |
 | + | One open claim per NGO per listing; a volunteer carries at most 2 pickups; food facts are frozen once claimed; total cannot drop below what is claimed |
+
+### Why this is exceptional vs existing BD efforts
+
+Phone trees, Bidyanondo-style drives, and consumer surplus apps move food by trust and chat. RescuePlate makes the hard parts **provable for the rubric**:
+
+| Differentiator | Rubric fit |
+|---|---|
+| Concurrent claims cannot oversell (row locks + ledger + idempotency) | **A05** |
+| Mid-transaction failure rolls back meals, claim row, and idempotency key | **A05** Demo console |
+| Live feed/claims via PG `NOTIFY` in-TX; claim payloads only to parties; volunteer board gets `pickup.board` | **A01** |
+| Versioned edits + conflict dialog (no silent overwrite) | **A01** |
+| Safe-until + release timer + **R9 route gate** | **M04** complex rules |
+| Maps + reverse geocode for donor/NGO pins and live pickup track | **M01 / M05** |
 
 ## Advanced challenge A05: Concurrency & Transaction Management
 
@@ -161,7 +175,7 @@ Sweeper (time rules) ───────────────────�
 - **Capacity race:** the NGO row lock makes "one NGO claims two listings at once" respect the daily capacity.
 - **Other races handled the same way:** two volunteers accepting one pickup, claim versus donor edit, duplicate sign-ups, double-posted listings.
 
-**Verify:** Demo console → "Race for the last meals" and "The same request, sent six times"; `npm run race -- <url>`; `test/concurrency.test.js` (8 NGOs for 40 meals, 8 for 1 meal, 30 separately registered NGOs for 1 meal and for 40 meals, 10 simultaneous copies of one request, and a simulated failure mid-transaction proving full rollback).
+**Verify:** Demo console → "Race for the last meals", "The same request, sent six times", and "Failure mid-claim, full rollback"; `npm run race -- <url>`; `test/concurrency.test.js` (8 NGOs for 40 meals, 8 for 1 meal, 30 separately registered NGOs for 1 meal and for 40 meals, 10 simultaneous copies of one request, and a simulated failure mid-transaction proving full rollback).
 
 **Limitations:** claims on one very popular listing are processed one at a time (fine at this scale; a queue or partitioned stock would be the next step). Idempotency keys are kept for 24 hours.
 
@@ -175,7 +189,7 @@ Sweeper (time rules) ───────────────────�
 - **Conflict resolution:** the browser does a three-way merge (`client/src/lib/merge.js`). Fields only one person changed merge automatically; a field both changed opens a dialog to choose. Presence shows who else has the listing open for editing.
 - **Not only listings:** an organization's details carry a `version` too (`002_org_version.sql`, `services/accounts.js → updateMyOrg`). Two staff members saving the Organization page at once, or a save that crosses an admin's verify or suspend, gets the same `409`, the same merge and the same choice dialog instead of a silent last-write-wins.
 - **Consistent shared state:** events carry the full row and its version, and clients keep the higher version, so duplicate or out-of-order events cannot roll the screen back. After a reconnect the client refetches a snapshot. Countdowns use the server clock.
-- **Access control:** sockets authenticate with the session cookie. Listing updates are public; claim events go only to the organizations and volunteer involved and carry ids only. Suspending a user disconnects their socket.
+- **Access control:** sockets authenticate with the session cookie. Listing updates are public; `claim.changed` goes only to the donor/NGO/assigned volunteer (and admin) with ids only; volunteers get a separate `pickup.board` hint when a new claim needs a runner. Suspending a user disconnects their socket.
 
 **Verify:** two windows as Donor and Donor (2nd staff), edit the same field of one listing and save both; Demo console → "Two people save the same listing" and "Drop the live connection"; `test/realtime.test.js`, `test/merge.test.js`. For the organization case: sign in as Donor and Donor (2nd staff), open **Organization → Edit details** in both, change the address in both and save both.
 

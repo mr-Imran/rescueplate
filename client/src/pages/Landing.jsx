@@ -34,7 +34,7 @@ const STEPS = [
   {
     n: '02',
     title: 'Claim nearby',
-    body: 'NGOs see distance and capacity, then claim what they can take before the food expires.',
+    body: 'NGOs see distance, capacity, and travel time. Claims that would expire on the road are blocked.',
   },
   {
     n: '03',
